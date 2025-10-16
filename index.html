@@ -1,1831 +1,1664 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Team Bear · Studio Edition</title>
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#020617" />
     <link rel="manifest" href="manifest.json" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+      const BUILD_VERSION = "2024.06.09a";
+    </script>
+    <link id="tailwind-cdn" rel="stylesheet" href="" />
+    <script>
+      document.getElementById("tailwind-cdn").href = `https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css?v=${BUILD_VERSION}`;
+    </script>
     <style>
+      html,
       body {
-        margin: 0;
-        min-height: 100vh;
-        background: radial-gradient(circle at 20% 20%, #1f2937, #020617 65%);
-        color: #e2e8f0;
-        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
       }
-      .glass {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.75));
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        box-shadow: 0 24px 80px rgba(2, 6, 23, 0.65);
+      .glass-panel {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.55));
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 30px 120px rgba(2, 6, 23, 0.65);
+        backdrop-filter: blur(22px);
       }
-      .soft-scroll::-webkit-scrollbar {
-        width: 10px;
-      }
-      .soft-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(148, 163, 184, 0.35);
-        border-radius: 9999px;
-      }
-      .card-shimmer {
+      .stat-bar {
         position: relative;
         overflow: hidden;
       }
-      .card-shimmer::after {
+      .stat-bar::after {
         content: "";
         position: absolute;
-        top: 0;
-        left: -100%;
-        width: 60%;
-        height: 100%;
-        background: linear-gradient(110deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
-        animation: sheen 2.6s ease-in-out infinite;
+        inset: 0;
+        background: linear-gradient(120deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+        pointer-events: none;
       }
-      @keyframes sheen {
-        0% {
-          transform: translateX(0);
-        }
-        100% {
-          transform: translateX(260%);
-        }
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-rows: repeat(5, minmax(0, 1fr));
+        position: relative;
       }
-      .toast-enter {
-        animation: toast-in 0.4s ease forwards;
+      .bear-sprite {
+        width: 96px;
+        height: 96px;
+        position: absolute;
+        transform-origin: 50% 100%;
+        transition: transform 0.15s ease;
       }
-      @keyframes toast-in {
+      .bear-sprite[data-facing="left"] {
+        transform: scaleX(-1);
+      }
+      .bear-sprite::before {
+        content: "";
+        position: absolute;
+        inset: 12px 18px 8px 18px;
+        border-radius: 28px;
+        background: radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.12), rgba(59, 130, 246, 0.05) 70%, rgba(15, 23, 42, 0.9));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+      .decor-item {
+        position: absolute;
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, rgba(148, 163, 184, 0.1), rgba(59, 130, 246, 0.05));
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: grab;
+      }
+      .decor-item:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.45);
+      }
+      .decor-item::after {
+        content: "Move · Sell";
+        position: absolute;
+        bottom: -22px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.625rem;
+        color: rgba(148, 163, 184, 0.8);
+        pointer-events: none;
+      }
+      .floating-text {
+        position: absolute;
+        animation: floatUp 0.8s ease forwards;
+        pointer-events: none;
+      }
+      @keyframes floatUp {
         0% {
           opacity: 0;
-          transform: translateY(10px) scale(0.95);
+          transform: translate(-50%, 0);
+        }
+        20% {
+          opacity: 1;
         }
         100% {
-          opacity: 1;
-          transform: translateY(0) scale(1);
+          opacity: 0;
+          transform: translate(-50%, -36px);
         }
       }
-      .mini-game-overlay canvas {
-        box-shadow: 0 16px 50px rgba(15, 23, 42, 0.5);
-        border-radius: 26px;
+      .button-press {
+        transition: transform 0.15s ease;
+      }
+      .button-press:active {
+        transform: scale(0.96);
+      }
+      .rarity-border-common {
+        box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.3);
+      }
+      .rarity-border-rare {
+        box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.45);
+      }
+      .rarity-border-epic {
+        box-shadow: 0 0 0 2px rgba(196, 181, 253, 0.5);
+      }
+      .rarity-border-legendary {
+        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.6);
+      }
+      .modal-backdrop {
+        background: rgba(2, 6, 23, 0.75);
+        backdrop-filter: blur(14px);
+      }
+      .pack-stage {
+        perspective: 1200px;
+      }
+      .card-flip {
+        transform-style: preserve-3d;
+        transition: transform 0.8s ease;
+      }
+      .card-flip[data-flipped="true"] {
+        transform: rotateY(180deg);
+      }
+      .card-face,
+      .card-back {
+        position: absolute;
+        inset: 0;
+        backface-visibility: hidden;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .card-back {
+        background: linear-gradient(135deg, rgba(30, 64, 175, 0.9), rgba(59, 130, 246, 0.5));
+      }
+      .card-face {
+        transform: rotateY(180deg);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 18px;
+      }
+      .sheen::after {
+        content: "";
+        position: absolute;
+        inset: -40%;
+        background: linear-gradient(120deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+        transform: translateX(-120%) rotate(20deg);
+        animation: sheenMove 2.4s linear infinite;
+      }
+      @keyframes sheenMove {
+        0% {
+          transform: translateX(-120%) rotate(20deg);
+        }
+        100% {
+          transform: translateX(120%) rotate(20deg);
+        }
       }
     </style>
   </head>
-  <body class="min-h-screen">
-    <div id="root" class="min-h-screen"></div>
-    <script type="text/babel">
-      const { useState, useEffect, useMemo, useRef } = React;
+  <body class="h-full">
+    <div id="app" class="mx-auto flex h-full max-w-6xl flex-col gap-6 px-6 py-8">
+      <header class="glass-panel flex flex-col gap-4 rounded-3xl px-6 py-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-4">
+            <div>
+              <h1 id="bear-name" class="text-2xl font-semibold text-slate-50">Team Bear</h1>
+              <p id="bear-lineage" class="text-xs uppercase tracking-[0.4em] text-slate-400">Studio Edition</p>
+            </div>
+            <span id="bear-rarity" class="rounded-full border border-slate-600 px-3 py-1 text-xs uppercase tracking-wide text-slate-200">Common</span>
+            <span id="bear-stage" class="rounded-full border border-emerald-600/40 bg-emerald-600/10 px-3 py-1 text-xs uppercase tracking-wide text-emerald-200">Cub</span>
+            <span id="bear-duty" class="rounded-full border border-cyan-600/30 px-3 py-1 text-xs uppercase tracking-wide text-cyan-200">Off Duty</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-6 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Credits</span>
+              <span id="credits" class="text-lg font-semibold text-amber-300">0</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Vouchers</span>
+              <span id="vouchers" class="text-lg font-semibold text-indigo-200">0</span>
+            </div>
+            <button id="settings-btn" class="button-press rounded-full bg-slate-800/70 px-3 py-1 text-xs uppercase tracking-wide text-slate-300 ring-1 ring-slate-600/50 hover:bg-slate-700/70">Settings</button>
+          </div>
+        </div>
+        <div id="kjv-line" class="hidden text-sm italic text-slate-300"></div>
+      </header>
 
-      // === Balance constants (tune freely) ===
-      const CONFIG = {
-        STORAGE_KEY: "team_bear_v3",
-        GRID: { COLS: 8, ROWS: 5, TILE: 96 },
-        ROOM_PADDING: 32,
-        BEAR_SPEED_TPS: 0.25,
-        BEAR_IDLE_WINDOW_MS: [4200, 7800],
-        BEAR_SLEEP_WINDOW_MS: [9000, 15000],
-        FRAME_RATES: { idle: 9, walk: 10, sit: 8, sleep: 8, stretch: 9 },
-        STAT_DECAY_IDLE_PER_MIN: -0.1,
-        STAT_DECAY_CONTRACT_PER_MIN: -0.2,
-        STAT_DECAY_THRESHOLD: 90,
-        STAT_DECAY_REDUCTION_FACTOR: 0.5,
-        QUICK_CARE_COST: 40,
-        QUICK_CARE_BOOST: 10,
-        BASE_STAT_MAX: 100,
-        STAT_MIN: 0,
-        CONTRACTS: [
-          {
-            id: "brief",
-            label: "30m Precision Brief",
-            durationMinutes: 30,
-            energyCost: 16,
-            payout: 320,
-          },
-          {
-            id: "audit",
-            label: "2h Compliance Audit",
-            durationMinutes: 120,
-            energyCost: 34,
-            payout: 820,
-          },
-          {
-            id: "overnight",
-            label: "8h Overnight Vigil",
-            durationMinutes: 480,
-            energyCost: 55,
-            payout: 2200,
-          },
-        ],
-        RARITIES: {
-          Common: { multiplier: 1.0, tone: "text-slate-300", border: "border-slate-500" },
-          Rare: { multiplier: 1.2, tone: "text-sky-200", border: "border-sky-400" },
-          Epic: { multiplier: 1.5, tone: "text-violet-200", border: "border-violet-400" },
-          Legendary: { multiplier: 1.8, tone: "text-amber-200", border: "border-amber-400" },
-        },
-        DECOR_CATALOG: [
-          { id: "lamp", name: "Carbon Wall Lamp", moraleCap: 2, note: "+2 morale cap", tint: "#facc15", value: 150 },
-          { id: "fern", name: "Shadow Fern", moraleCap: 3, note: "+3 morale cap", tint: "#34d399", value: 180 },
-          { id: "turntable", name: "Analog Turntable", moraleCap: 4, note: "+4 morale cap", tint: "#38bdf8", value: 240 },
-          { id: "espresso", name: "Espresso Cart", moraleCap: 5, note: "+5 morale cap", tint: "#fb923c", value: 280 },
-        ],
-        ACCESSORY_LIBRARY: [
-          { id: "felt-fedora", name: "Felt Fedora", slot: "head", rarity: "Rare", color: "#facc15" },
-          { id: "sable-cape", name: "Sable Cape", slot: "body", rarity: "Epic", color: "#4c1d95" },
-          { id: "river-stone", name: "River Stone Pendant", slot: "neck", rarity: "Common", color: "#38bdf8" },
-          { id: "artisan-wrap", name: "Artisan Wrap", slot: "paws", rarity: "Rare", color: "#fb7185" },
-          { id: "steel-monocle", name: "Steel Monocle", slot: "head", rarity: "Legendary", color: "#fcd34d" },
-          { id: "umber-coat", name: "Umber Coat", slot: "colorway", rarity: "Epic", color: "#78350f" },
-          { id: "midnight-band", name: "Midnight Band", slot: "neck", rarity: "Epic", color: "#0ea5e9" },
-        ],
-        PACK_TYPES: {
-          standard: {
-            name: "Standard Pack",
-            draws: 3,
-            price: 180,
-            rarityWeights: { Common: 55, Rare: 30, Epic: 12, Legendary: 3 },
-            guaranteedAccessory: false,
-          },
-          elite: {
-            name: "Elite Pack",
-            draws: 4,
-            price: 420,
-            rarityWeights: { Common: 40, Rare: 34, Epic: 20, Legendary: 6 },
-            guaranteedAccessory: true,
-          },
-          premier: {
-            name: "Premier Pack",
-            draws: 5,
-            price: 760,
-            rarityWeights: { Common: 28, Rare: 36, Epic: 26, Legendary: 10 },
-            guaranteedAccessory: true,
-          },
-        },
-        MILESTONES: [
-          {
-            id: "professional-i",
-            name: "Professional I",
-            description: "Maintain every stat above 70 for three cumulative hours.",
-            reward: { credits: 240 },
-          },
-          {
-            id: "craftsman",
-            name: "Craftsman",
-            description: "Complete five contracts without morale dipping under 50.",
-            reward: { pack: "standard" },
-          },
-          {
-            id: "steady-hand",
-            name: "Steady Hand",
-            description: "Earn 10,000 lifetime credits.",
-            reward: { credits: 600 },
-          },
-        ],
-        MINI_GAME_LIMITS: { perHour: 2, perDay: 5, durationSeconds: 75 },
-        MINI_GAMES: [
-          {
-            id: "timberline",
-            name: "Timberline Rhythm",
-            description: "Tap on beat for streak multipliers.",
-            minReward: 60,
-            maxReward: 180,
-          },
-          {
-            id: "riverside",
-            name: "Riverside Fishing",
-            description: "Ride the timing bar to reel better catches.",
-            minReward: 30,
-            maxReward: 200,
-          },
-          {
-            id: "courier",
-            name: "Courier Run",
-            description: "Swap lanes and stay composed over distance.",
-            minReward: 45,
-            maxReward: 200,
-          },
-          { id: "memory", name: "Memory Rack", description: "Under construction.", disabled: true },
-          { id: "workshop", name: "Workshop", description: "Under construction.", disabled: true },
-        ],
-        KJV_VERSES: [
-          { ref: "Psalm 90:17", text: "And let the beauty of the LORD our God be upon us: and establish thou the work of our hands upon us." },
-          { ref: "Proverbs 22:29", text: "Seest thou a man diligent in his business? he shall stand before kings; he shall not stand before mean men." },
-          { ref: "Colossians 3:23", text: "And whatsoever ye do, do it heartily, as to the Lord, and not unto men." },
-        ],
-        FIREBASE_COLLECTION: "team_bear_profile_v3",
+      <main class="flex flex-1 flex-col gap-6 md:flex-row">
+        <section class="glass-panel relative flex-1 rounded-3xl p-6">
+          <button id="decor-btn" class="absolute right-8 top-8 z-20 rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300 ring-1 ring-slate-600/60 hover:bg-slate-800/80">Decor</button>
+          <div class="tile-grid aspect-[8/5] rounded-2xl bg-gradient-to-b from-slate-800/60 via-slate-900/70 to-slate-950/80" id="room-grid"></div>
+        </section>
+        <aside class="flex w-full flex-col gap-4 md:w-80">
+          <section class="glass-panel rounded-3xl p-5">
+            <h2 class="text-sm uppercase tracking-[0.4em] text-slate-400">Vitals</h2>
+            <div class="mt-4 space-y-3" id="stats"></div>
+          </section>
+          <section class="glass-panel rounded-3xl p-5">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm uppercase tracking-[0.4em] text-slate-400">Side Gigs</h2>
+              <span id="sidegig-remaining" class="text-xs text-slate-400"></span>
+            </div>
+            <div class="mt-4 grid gap-3" id="mini-game-list"></div>
+          </section>
+          <section class="glass-panel rounded-3xl p-5" id="milestone-panel">
+            <h2 class="text-sm uppercase tracking-[0.4em] text-slate-400">Milestones</h2>
+            <div class="mt-4 space-y-3" id="milestones"></div>
+          </section>
+        </aside>
+      </main>
+
+      <footer class="glass-panel flex flex-col gap-4 rounded-3xl px-6 py-5">
+        <div class="flex flex-wrap justify-center gap-3 text-sm text-slate-400">
+          <button class="action-btn button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700" data-action="feed">Feed</button>
+          <button class="action-btn button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700" data-action="clean">Clean</button>
+          <button class="action-btn button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700" data-action="play">Play</button>
+          <button class="action-btn button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700" data-action="rest">Rest</button>
+          <button id="quick-care" class="button-press rounded-full bg-amber-500/20 px-4 py-2 font-semibold text-amber-200 ring-1 ring-amber-400/60 hover:bg-amber-500/30">Quick Care · 40 Credits</button>
+          <button id="contracts-btn" class="button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700">Contracts</button>
+          <button id="packs-btn" class="button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700">Packs</button>
+          <button id="wardrobe-btn" class="button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700">Wardrobe</button>
+          <button id="quests-btn" class="button-press rounded-full bg-slate-800/70 px-4 py-2 font-medium text-slate-100 hover:bg-slate-700">Quests</button>
+        </div>
+        <p class="text-center text-xs uppercase tracking-[0.4em] text-slate-500">Build <span id="build-version"></span></p>
+      </footer>
+    </div>
+
+    <div id="modal-root"></div>
+    <div id="toast-root" class="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-3"></div>
+
+    <script>
+      const STORAGE_KEY = "team_bear_v3";
+      const SCHEMA_VERSION = 3;
+      const GRID_CONFIG = { cols: 8, rows: 5, tile: 96 };
+      const RARITY_DATA = {
+        common: { label: "Common", multiplier: 1.0, badge: "bg-slate-700/60 text-slate-200", border: "rarity-border-common" },
+        rare: { label: "Rare", multiplier: 1.2, badge: "bg-sky-700/60 text-sky-200", border: "rarity-border-rare" },
+        epic: { label: "Epic", multiplier: 1.5, badge: "bg-violet-700/60 text-violet-200", border: "rarity-border-epic" },
+        legendary: { label: "Legendary", multiplier: 1.8, badge: "bg-amber-600/20 text-amber-200", border: "rarity-border-legendary" },
       };
-
-      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-      const lerp = (a, b, t) => a + (b - a) * t;
-      const randomRange = (min, max) => Math.random() * (max - min) + min;
-      const now = () => Date.now();
-
-      const weightedPick = (weights) => {
-        const total = Object.values(weights).reduce((sum, val) => sum + val, 0);
-        let threshold = Math.random() * total;
-        for (const key of Object.keys(weights)) {
-          threshold -= weights[key];
-          if (threshold <= 0) return key;
-        }
-        return Object.keys(weights)[0];
-      };
-
-      const baseGameState = () => ({
-        credits: 720,
-        vouchers: 0,
-        rarity: "Epic",
-        stats: { energy: 88, cleanliness: 82, morale: 90 },
-        decor: [],
-        accessories: {
-          inventory: CONFIG.ACCESSORY_LIBRARY.map((item) => ({ ...item, quantity: item.rarity === "Common" ? 1 : 0 })),
-          equipped: { head: null, neck: null, body: null, paws: null, colorway: null },
+      const CONTRACT_TYPES = [
+        { id: "brief", label: "30m Precision Brief", durationMinutes: 30, energyRate: 1, payout: 120 },
+        { id: "audit", label: "2h Compliance Audit", durationMinutes: 120, energyRate: 1.5, payout: 600 },
+        { id: "overnight", label: "8h Overnight Vigil", durationMinutes: 480, energyRate: 2, payout: 2600 },
+      ];
+      const PACK_CATALOG = {
+        standard: {
+          name: "Standard Pack",
+          draws: 3,
+          price: 240,
+          odds: { common: 0.6, rare: 0.26, epic: 0.11, legendary: 0.03 },
         },
-        packs: { standard: 1, elite: 0, premier: 0 },
-        milestones: CONFIG.MILESTONES.map((m) => ({ id: m.id, progress: 0, achieved: false, claimed: false })),
-        settings: { showKJV: false, volume: 0.4 },
-        contract: null,
-        lastTick: now(),
-        lifetime: { creditsEarned: 0, dutyMinutes: 0, contractsCompleted: 0, moraleAbove70Minutes: 0 },
-        miniGameUsage: {},
-        verseIndex: 0,
-        toast: [],
+        elite: {
+          name: "Elite Pack",
+          draws: 4,
+          price: 540,
+          odds: { common: 0.45, rare: 0.34, epic: 0.17, legendary: 0.04 },
+        },
+        premier: {
+          name: "Premier Pack",
+          draws: 5,
+          price: 900,
+          odds: { common: 0.34, rare: 0.34, epic: 0.23, legendary: 0.09 },
+        },
+      };
+      const ACCESSORY_LIBRARY = [
+        { id: "fedora", slot: "head", name: "Felt Fedora", rarity: "rare", flavor: "+2 morale cap" },
+        { id: "monocle", slot: "head", name: "Steel Monocle", rarity: "legendary", flavor: "+3 morale cap" },
+        { id: "wrap", slot: "body", name: "Midnight Wrap", rarity: "epic", flavor: "+5 morale cap" },
+        { id: "band", slot: "neck", name: "Midday Band", rarity: "rare", flavor: "+1 income" },
+        { id: "gloves", slot: "paws", name: "Artisan Gloves", rarity: "rare", flavor: "+2 cleanliness cap" },
+        { id: "warm", slot: "colorway", name: "Warm Undertone", rarity: "epic", flavor: "Rich finish" },
+      ];
+      const DECOR_LIBRARY = [
+        { id: "planter", name: "Eucalyptus Planter", boosts: { moraleCap: 1 } },
+        { id: "record", name: "Vinyl Console", boosts: { moraleCap: 2 } },
+        { id: "lamp", name: "Amber Floor Lamp", boosts: { energyCap: 1 } },
+        { id: "espresso", name: "Espresso Bar", boosts: { moraleCap: 2, energyCap: 1 } },
+      ];
+      const MINI_GAMES = [
+        { id: "rhythm", name: "Timberline Rhythm", desc: "On-beat taps with streak multiplier", maxPerHour: 2, maxPerDay: 5 },
+        { id: "fish", name: "Riverside Fishing", desc: "Time the strike bar for rare catches", maxPerHour: 2, maxPerDay: 5 },
+        { id: "courier", name: "Courier Run", desc: "Three-lane sprint, avoid debris", maxPerHour: 1, maxPerDay: 5 },
+        { id: "memory", name: "Memory Match", desc: "4×3 pairs — coming soon", stub: true },
+        { id: "workshop", name: "Workshop", desc: "Precision stop challenge — coming soon", stub: true },
+      ];
+      const MILESTONE_DEFS = {
+        professional1: {
+          name: "Professional I",
+          description: "Complete 3 contracts.",
+          reward: "+200 Credits",
+          check: (s) => (s.stats.contractsCompleted || 0) >= 3,
+        },
+        craftsman: {
+          name: "Craftsman",
+          description: "Perfect Timberline Rhythm once.",
+          reward: "Standard Pack",
+          check: (s) => s.miniGames.history?.rhythmPerfect || false,
+        },
+        steadyHand: {
+          name: "Steady Hand",
+          description: "Keep all stats ≥ 70 for 48 cumulative hours.",
+          reward: "+1 Elite Decor",
+          check: (s) => (s.stats.steadyMinutes || 0) >= 60 * 48,
+        },
+        homestead2: {
+          name: "Homestead II",
+          description: "Place 10 decor items and reach Room Level 3.",
+          reward: "Standard Pack",
+          check: (s) => s.room.decor.length >= 10 && (s.room.level || 1) >= 3,
+        },
+      };
+      const DEFAULT_VERSES = [
+        "Iron sharpeneth iron; so a man sharpeneth the countenance of his friend. — Proverbs 27:17",
+        "And let us not be weary in well doing: for in due season we shall reap, if we faint not. — Galatians 6:9",
+        "Bear ye one another's burdens, and so fulfil the law of Christ. — Galatians 6:2",
+      ];
+      const STAT_NAMES = [
+        { key: "energy", label: "Energy", tone: "from-amber-400 to-amber-600" },
+        { key: "cleanliness", label: "Cleanliness", tone: "from-cyan-400 to-cyan-600" },
+        { key: "morale", label: "Morale", tone: "from-violet-400 to-violet-600" },
+      ];
+
+      let state = loadState();
+      let lastFrame = performance.now();
+      let realtimeAccumulator = 0;
+      let saveQueued = false;
+      let firebaseMirror = null;
+      const roomGrid = document.getElementById("room-grid");
+      const bearElement = createBearSprite();
+      const roomEngine = new RoomEngine(roomGrid, bearElement);
+      let decorDrag = null;
+      let decorGhost = null;
+      let decorMenu = null;
+      document.getElementById("build-version").textContent = BUILD_VERSION;
+
+      if (window.BEAR_FIREBASE_CONFIG) {
+        initFirebase(window.BEAR_FIREBASE_CONFIG).catch((err) => console.warn("Firebase init failed", err));
+      }
+
+      applyOfflineProgress(state);
+      queueSave();
+      render();
+      requestAnimationFrame(mainLoop);
+
+      document.getElementById("quick-care").addEventListener("click", () => {
+        quickCare(state);
+        render();
+        queueSave();
       });
 
-      const moraleMax = (decor) => CONFIG.BASE_STAT_MAX + decor.reduce((acc, item) => acc + (item.moraleCap || 0), 0);
+      document.querySelectorAll(".action-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          handleBasicAction(btn.dataset.action);
+        });
+      });
 
-      class SpriteAnimator {
-        constructor() {
-          this.state = "idle";
-          this.frames = this.createFrames();
-          this.frameIndex = 0;
-          this.accumulator = 0;
-          this.fps = CONFIG.FRAME_RATES.idle;
+      document.getElementById("contracts-btn").addEventListener("click", () => openContractsModal());
+      document.getElementById("packs-btn").addEventListener("click", () => openPackModal());
+      document.getElementById("wardrobe-btn").addEventListener("click", () => openWardrobeModal());
+      document.getElementById("quests-btn").addEventListener("click", () => openQuestsModal());
+      document.getElementById("settings-btn").addEventListener("click", () => openSettingsModal());
+      document.getElementById("decor-btn").addEventListener("click", () => openDecorModal());
+
+      document.addEventListener("pointermove", (ev) => {
+        if (!decorDrag || !decorGhost) return;
+        updateDecorGhost(ev.clientX, ev.clientY);
+      });
+      document.addEventListener("pointerup", (ev) => {
+        if (!decorDrag) return;
+        completeDecorDrag(ev.clientX, ev.clientY);
+      });
+      roomGrid.addEventListener("contextmenu", (ev) => {
+        const target = ev.target.closest(".decor-item");
+        if (!target) return;
+        ev.preventDefault();
+        const index = Number(target.dataset.index);
+        showDecorMenu(index, ev.clientX, ev.clientY);
+      });
+      window.addEventListener("resize", () => renderDecor());
+      requestAnimationFrame(() => renderDecor());
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          return migrateSave(createDefaultState());
         }
-
-        createFrames() {
-          const frame = (pose) => (ctx, flipped, accessories) => {
-            ctx.save();
-            if (flipped) {
-              ctx.scale(-1, 1);
-            }
-            const colorway = accessories?.colorway?.color || "#3f2f27";
-            ctx.fillStyle = colorway;
-            // body
-            ctx.beginPath();
-            ctx.ellipse(0, -20, 28, 30, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // belly
-            ctx.fillStyle = "#604437";
-            ctx.beginPath();
-            ctx.ellipse(0, -10, 14, 16, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // head
-            ctx.fillStyle = colorway;
-            ctx.beginPath();
-            ctx.ellipse(0, -54 + pose.headOffset, 22 + pose.headStretch, 18 + pose.headStretch, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = "#f1e4d0";
-            ctx.beginPath();
-            ctx.ellipse(0, -52 + pose.headOffset, 12 + pose.headStretch * 0.6, 9 + pose.headStretch * 0.6, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // ears
-            ctx.fillStyle = colorway;
-            ctx.beginPath();
-            ctx.ellipse(-16, -70 + pose.headOffset, 6, 6, 0, 0, Math.PI * 2);
-            ctx.ellipse(16, -70 + pose.headOffset, 6, 6, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // eyes
-            ctx.fillStyle = "#020617";
-            ctx.beginPath();
-            ctx.arc(-6 + pose.eyeOffset, -58 + pose.headOffset, 2, 0, Math.PI * 2);
-            ctx.arc(6 + pose.eyeOffset, -58 + pose.headOffset, 2, 0, Math.PI * 2);
-            ctx.fill();
-            // paws
-            ctx.fillStyle = colorway;
-            ctx.beginPath();
-            ctx.ellipse(-16 + pose.leftPaw.x, -4 + pose.leftPaw.y, 10, 14, 0.2, 0, Math.PI * 2);
-            ctx.ellipse(16 + pose.rightPaw.x, -4 + pose.rightPaw.y, 10, 14, -0.2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(-12, 10 + pose.footOffset, 10, 14, 0, 0, Math.PI * 2);
-            ctx.ellipse(12, 10 + pose.footOffset, 10, 14, 0, 0, Math.PI * 2);
-            ctx.fill();
-            this.drawAccessories(ctx, accessories, pose);
-            ctx.restore();
-          };
-
-          const states = {
-            idle: [
-              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: -2, y: 2 }, rightPaw: { x: 2, y: -1 }, footOffset: 0 },
-              { headOffset: -1, headStretch: 0.4, eyeOffset: 0.4, leftPaw: { x: -1, y: 1 }, rightPaw: { x: 1, y: 0 }, footOffset: 0.4 },
-              { headOffset: 0, headStretch: 0, eyeOffset: -0.2, leftPaw: { x: -3, y: 2 }, rightPaw: { x: 3, y: -1 }, footOffset: 0 },
-            ],
-            walk: [
-              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: -6, y: -4 }, rightPaw: { x: 4, y: 6 }, footOffset: 0 },
-              { headOffset: -1, headStretch: 0.2, eyeOffset: 0, leftPaw: { x: -4, y: -2 }, rightPaw: { x: 6, y: 4 }, footOffset: 0 },
-              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: 4, y: 6 }, rightPaw: { x: -6, y: -4 }, footOffset: 0 },
-              { headOffset: -1, headStretch: 0.2, eyeOffset: 0, leftPaw: { x: 6, y: 4 }, rightPaw: { x: -4, y: -2 }, footOffset: 0 },
-            ],
-            sit: [
-              { headOffset: 3, headStretch: -0.6, eyeOffset: 0.2, leftPaw: { x: -12, y: 12 }, rightPaw: { x: 12, y: 12 }, footOffset: 4 },
-              { headOffset: 4, headStretch: -0.8, eyeOffset: 0.4, leftPaw: { x: -11, y: 12 }, rightPaw: { x: 11, y: 12 }, footOffset: 4 },
-            ],
-            sleep: [
-              { headOffset: 8, headStretch: 1.2, eyeOffset: -2, leftPaw: { x: -10, y: 14 }, rightPaw: { x: 10, y: 14 }, footOffset: 6 },
-              { headOffset: 9, headStretch: 1.4, eyeOffset: -2, leftPaw: { x: -11, y: 14 }, rightPaw: { x: 11, y: 14 }, footOffset: 6 },
-            ],
-            stretch: [
-              { headOffset: -6, headStretch: 0.6, eyeOffset: 0.2, leftPaw: { x: -8, y: -12 }, rightPaw: { x: 8, y: -12 }, footOffset: -4 },
-              { headOffset: -5, headStretch: 0.4, eyeOffset: 0.2, leftPaw: { x: -6, y: -10 }, rightPaw: { x: 6, y: -10 }, footOffset: -2 },
-              { headOffset: -6, headStretch: 0.6, eyeOffset: 0.2, leftPaw: { x: -8, y: -12 }, rightPaw: { x: 8, y: -12 }, footOffset: -4 },
-            ],
-          };
-
-          Object.keys(states).forEach((state) => {
-            states[state] = states[state].map((pose) => ({ draw: frame(pose) }));
-          });
-          return states;
-        }
-
-        drawAccessories(ctx, accessories, pose) {
-          if (!accessories) return;
-          if (accessories.head) {
-            ctx.save();
-            ctx.translate(0, -72 + pose.headOffset);
-            ctx.fillStyle = accessories.head.color;
-            ctx.fillRect(-18, -6, 36, 8);
-            ctx.fillRect(-14, -12, 28, 6);
-            ctx.restore();
-          }
-          if (accessories.neck) {
-            ctx.save();
-            ctx.translate(0, -40 + pose.headOffset);
-            ctx.strokeStyle = accessories.neck.color;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(0, 0, 14, Math.PI * 0.8, Math.PI * 0.2);
-            ctx.stroke();
-            ctx.restore();
-          }
-          if (accessories.body) {
-            ctx.save();
-            ctx.translate(0, -22);
-            ctx.fillStyle = accessories.body.color;
-            ctx.globalAlpha = 0.45;
-            ctx.fillRect(-24, -14, 48, 36);
-            ctx.restore();
-          }
-          if (accessories.paws) {
-            ctx.save();
-            ctx.translate(0, 4 + pose.footOffset);
-            ctx.fillStyle = accessories.paws.color;
-            ctx.globalAlpha = 0.65;
-            ctx.beginPath();
-            ctx.ellipse(-12, 6, 12, 8, 0, 0, Math.PI * 2);
-            ctx.ellipse(12, 6, 12, 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          }
-        }
-
-        setState(state) {
-          if (state === this.state) return;
-          this.state = state;
-          this.fps = CONFIG.FRAME_RATES[state] || 8;
-          this.frameIndex = 0;
-          this.accumulator = 0;
-        }
-
-        update(dt) {
-          const frames = this.frames[this.state];
-          if (!frames || frames.length === 0) return;
-          const frameDuration = 1000 / this.fps;
-          this.accumulator += dt;
-          while (this.accumulator >= frameDuration) {
-            this.accumulator -= frameDuration;
-            this.frameIndex = (this.frameIndex + 1) % frames.length;
-          }
-        }
-
-        draw(ctx, accessories, flipped) {
-          const frames = this.frames[this.state];
-          const current = frames[this.frameIndex] || frames[0];
-          ctx.save();
-          current.draw(ctx, flipped, accessories);
-          ctx.restore();
+        try {
+          const parsed = JSON.parse(raw);
+          return migrateSave(parsed);
+        } catch (err) {
+          console.warn("Save corrupted, resetting.", err);
+          return migrateSave(createDefaultState());
         }
       }
-      class BearController {
-        constructor(room) {
-          this.room = room;
-          this.animator = new SpriteAnimator();
-          this.gridPosition = { col: 3, row: 2 };
-          this.target = { ...this.gridPosition };
-          this.pixel = this.room.tileToPoint(this.gridPosition);
-          this.facing = 1;
-          this.behavior = "idle";
-          this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
-          this.sleepUntil = null;
-          this.accessories = {};
-        }
 
-        setAccessories(accessories) {
-          this.accessories = accessories;
-        }
+      function createDefaultState() {
+        return {
+          meta: { schemaVersion: SCHEMA_VERSION, lastSaved: Date.now(), homeCode: null },
+          credits: 400,
+          vouchers: 0,
+          settings: { showKJV: false, sfx: 0.5, music: 0.2 },
+          bear: {
+            name: "Ash",
+            rarity: "rare",
+            stage: "cub",
+            ageMinutes: 0,
+            pos: { x: 3, y: 2 },
+            facing: "right",
+            stats: { energy: 82, cleanliness: 76, morale: 80 },
+            job: { id: null, contractEndsAt: 0, payout: 0, startedAt: 0 },
+          },
+          room: { gridW: GRID_CONFIG.cols, gridH: GRID_CONFIG.rows, level: 1, decor: [] },
+          accessories: {
+            owned: [{ id: "fedora", slot: "head", rarity: "rare", name: "Felt Fedora", flavor: "+2 morale cap" }],
+            equipped: { head: null, neck: null, body: null, paws: null, colorway: null },
+          },
+          cards: { collection: [] },
+          miniGames: { playsToday: {}, lastPlayedAt: {}, history: {} },
+          stats: { contractsCompleted: 0, steadyMinutes: 0 },
+          milestones: {},
+          compliments: { sentToday: false, receivedToday: false, streakDays: 0, lastSent: 0, lastReceived: 0, streakUpdated: 0 },
+          quests: { active: [], archive: [] },
+          versesKJV: DEFAULT_VERSES,
+        };
+      }
 
-        pickNewTarget() {
-          this.target = this.room.randomTile();
-          this.behavior = "walk";
-          this.animator.setState("walk");
+      function migrateSave(current) {
+        const state = JSON.parse(JSON.stringify(current || {}));
+        if (!state.meta) state.meta = { lastSaved: Date.now(), schemaVersion: SCHEMA_VERSION, homeCode: null };
+        state.meta.schemaVersion = SCHEMA_VERSION;
+        if (!state.settings) state.settings = { showKJV: false, sfx: 0.5, music: 0.2 };
+        if (!state.bear) {
+          state.bear = createDefaultState().bear;
+        } else {
+          state.bear.pos = state.bear.pos || { x: 3, y: 2 };
+          state.bear.facing = state.bear.facing || "right";
+          state.bear.stage = state.bear.stage || "cub";
+          if (!state.bear.stats) state.bear.stats = { energy: 70, cleanliness: 70, morale: 70 };
+          state.bear.job = state.bear.job || { id: null, contractEndsAt: 0, payout: 0, startedAt: 0 };
         }
+        if (!state.room) state.room = { gridW: GRID_CONFIG.cols, gridH: GRID_CONFIG.rows, level: 1, decor: [] };
+        if (!Array.isArray(state.room.decor)) state.room.decor = [];
+        if (!state.accessories) state.accessories = createDefaultState().accessories;
+        if (!state.accessories.equipped) {
+          state.accessories.equipped = { head: null, neck: null, body: null, paws: null, colorway: null };
+        } else {
+          ["head", "neck", "body", "paws", "colorway"].forEach((slot) => {
+            if (state.accessories.equipped[slot] === undefined) state.accessories.equipped[slot] = null;
+          });
+        }
+        if (!state.cards) state.cards = { collection: [] };
+        if (!state.miniGames) state.miniGames = { playsToday: {}, lastPlayedAt: {}, history: {} };
+        if (!state.stats) state.stats = { contractsCompleted: 0, steadyMinutes: 0 };
+        if (!state.milestones) state.milestones = {};
+        if (!state.compliments) state.compliments = { sentToday: false, receivedToday: false, streakDays: 0, lastSent: 0, lastReceived: 0, streakUpdated: 0 };
+        if (!state.quests) state.quests = { active: [], archive: [] };
+        if (!state.versesKJV || !Array.isArray(state.versesKJV)) state.versesKJV = DEFAULT_VERSES;
+        return state;
+      }
 
-        update(dt) {
-          if (this.sleepUntil && now() < this.sleepUntil) {
-            this.animator.setState("sleep");
-            this.animator.update(dt);
+      function applyOfflineProgress(state) {
+        const now = Date.now();
+        const minutesElapsed = Math.floor((now - (state.meta.lastSaved || now)) / 60000);
+        if (minutesElapsed <= 0) return;
+        const decayRateIdle = 1 / 10;
+        const decayRateContract = 1 / 5;
+        const stats = state.bear.stats;
+        const contract = state.bear.job;
+        let remainingMinutes = minutesElapsed;
+        if (contract && contract.id && contract.contractEndsAt > state.meta.lastSaved) {
+          const contractEndMinutes = Math.floor((contract.contractEndsAt - state.meta.lastSaved) / 60000);
+          const activeMinutes = Math.min(contractEndMinutes, minutesElapsed);
+          const contractDecay = activeMinutes * decayRateContract;
+          stats.energy = Math.max(0, stats.energy - contractDecay);
+          stats.cleanliness = Math.max(0, stats.cleanliness - contractDecay * 0.6);
+          stats.morale = Math.max(0, stats.morale - contractDecay * 0.4);
+          remainingMinutes -= activeMinutes;
+          if (now >= contract.contractEndsAt) {
+            state.credits += contract.payout;
+            state.stats.contractsCompleted = (state.stats.contractsCompleted || 0) + 1;
+            showToast(`Contract cleared · +${contract.payout} credits`, "success");
+            contract.id = null;
+            contract.contractEndsAt = 0;
+            contract.payout = 0;
+            contract.startedAt = 0;
+          }
+        }
+        if (remainingMinutes > 0) {
+          const decay = remainingMinutes * decayRateIdle;
+          stats.energy = Math.max(0, stats.energy - decay);
+          stats.cleanliness = Math.max(0, stats.cleanliness - decay);
+          stats.morale = Math.max(0, stats.morale - decay);
+        }
+        if (isOnDuty(state)) {
+          const earned = incomePerMinute(state) * minutesElapsed;
+          state.credits += Math.floor(earned);
+        }
+        stats.energy = clamp(stats.energy, 0, statMax("energy"));
+        stats.cleanliness = clamp(stats.cleanliness, 0, statMax("cleanliness"));
+        stats.morale = clamp(stats.morale, 0, statMax("morale"));
+        state.bear.ageMinutes += minutesElapsed;
+        updateBearStage(state);
+        trackSteadyProgress(state, minutesElapsed);
+        state.meta.lastSaved = now;
+      }
+
+      function incomePerMinute(state) {
+        const base = 2;
+        const rarity = RARITY_DATA[state.bear.rarity]?.multiplier || 1;
+        const penalty = Object.values(state.bear.stats).some((v) => v < 40) ? 0.75 : 1;
+        return base * rarity * penalty;
+      }
+
+      function quickCare(state) {
+        if (state.credits < 40) {
+          showToast("Not enough credits for Quick Care.", "warn");
+          return false;
+        }
+        state.credits -= 40;
+        const stats = state.bear.stats;
+        STAT_NAMES.forEach((entry) => {
+          stats[entry.key] = clamp(stats[entry.key] + 10, 0, statMax(entry.key));
+        });
+        spawnFloatingText("+10", { x: state.bear.pos.x, y: state.bear.pos.y });
+        showToast("Quick Care applied", "success");
+        trackSteadyProgress(state, 1);
+        return true;
+      }
+
+      function SpriteAnimator(element) {
+        this.element = element;
+        this.state = "idle";
+        this.elapsed = 0;
+      }
+      SpriteAnimator.prototype.setState = function (name) {
+        if (this.state !== name) {
+          this.state = name;
+          this.elapsed = 0;
+        }
+      };
+      SpriteAnimator.prototype.update = function () {};
+      const bearAnimator = new SpriteAnimator(bearElement);
+
+      function RoomEngine(container, bearNode) {
+        this.container = container;
+        this.bear = bearNode;
+        this.container.appendChild(bearNode);
+        this.target = { x: state.bear.pos.x, y: state.bear.pos.y };
+        this.moveTimer = Date.now() + 4000;
+      }
+      RoomEngine.prototype.pickNext = function () {
+        this.moveTimer = Date.now() + 6000 + Math.random() * 6000;
+        this.target = { x: Math.floor(Math.random() * GRID_CONFIG.cols), y: Math.floor(Math.random() * GRID_CONFIG.rows) };
+      };
+      RoomEngine.prototype.update = function (delta) {
+        const now = Date.now();
+        if (now > this.moveTimer) {
+          this.pickNext();
+        }
+        const pos = state.bear.pos;
+        const speed = delta / 1000 * 1.2;
+        const dx = this.target.x - pos.x;
+        const dy = this.target.y - pos.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0.05) {
+          pos.x += (dx / dist) * speed;
+          pos.y += (dy / dist) * speed;
+          state.bear.facing = dx < 0 ? "left" : "right";
+          bearAnimator.setState("walk");
+        } else {
+          bearAnimator.setState("idle");
+        }
+        const rect = this.container.getBoundingClientRect();
+        const tileW = rect.width / GRID_CONFIG.cols;
+        const tileH = rect.height / GRID_CONFIG.rows;
+        this.bear.style.left = `${pos.x * tileW}px`;
+        this.bear.style.top = `${pos.y * tileH}px`;
+        this.bear.dataset.facing = state.bear.facing;
+      };
+
+      function equipAccessory(slot, itemId) {
+        const ownedItem = state.accessories.owned.find((item) => item.id === itemId);
+        if (!ownedItem) return;
+        if (state.accessories.equipped[slot] === itemId) {
+          state.accessories.equipped[slot] = null;
+          showToast(`${ownedItem.name} removed`, "info");
+        } else {
+          state.accessories.equipped[slot] = itemId;
+          showToast(`${ownedItem.name} equipped`, "success");
+        }
+        queueSave();
+        render();
+      }
+
+      function unequipAccessory(slot) {
+        state.accessories.equipped[slot] = null;
+        showToast(`${slot} cleared`, "info");
+        queueSave();
+        render();
+      }
+
+      function openPack(type) {
+        const pack = PACK_CATALOG[type];
+        if (!pack) return;
+        if (state.credits < pack.price) {
+          showToast("Not enough credits", "warn");
+          return;
+        }
+        state.credits -= pack.price;
+        const pulls = [];
+        for (let i = 0; i < pack.draws; i++) {
+          const rarity = rollRarity(pack.odds);
+          const pool = ACCESSORY_LIBRARY.filter((item) => item.rarity === rarity);
+          const drawn = pool[Math.floor(Math.random() * pool.length)] || ACCESSORY_LIBRARY[Math.floor(Math.random() * ACCESSORY_LIBRARY.length)];
+          const owned = state.accessories.owned.find((item) => item.id === drawn.id);
+          if (!owned) {
+            state.accessories.owned.push({ ...drawn });
+            pulls.push({ ...drawn, duplicate: false });
+          } else {
+            state.vouchers += 1;
+            pulls.push({ ...drawn, duplicate: true });
+          }
+        }
+        queueSave();
+        render();
+        showPackReveal(pack, pulls);
+      }
+
+      function rollRarity(odds) {
+        const r = Math.random();
+        let acc = 0;
+        for (const key of ["legendary", "epic", "rare", "common"]) {
+          acc += odds[key];
+          if (r <= acc) return key;
+        }
+        return "common";
+      }
+
+      function playMiniGame(id) {
+        const game = MINI_GAMES.find((g) => g.id === id);
+        if (!game || game.stub) return;
+        const now = Date.now();
+        const plays = state.miniGames.playsToday[id] || 0;
+        const lastPlayed = state.miniGames.lastPlayedAt[id] || 0;
+        const hoursSince = (now - lastPlayed) / 3600000;
+        const dailyTotal = Object.values(state.miniGames.playsToday).reduce((a, b) => a + b, 0);
+        if (dailyTotal >= 5) {
+          showToast("Side gig cap reached for today", "warn");
+          return;
+        }
+        if (plays >= game.maxPerDay) {
+          showToast(`${game.name} · Daily cap reached`, "warn");
+          return;
+        }
+        if (plays >= game.maxPerHour && hoursSince < 1) {
+          showToast(`${game.name} · Come back soon`, "info");
+          return;
+        }
+        openMiniGameModal(game);
+      }
+
+      function sharedQuestCreate(template) {
+        const id = `quest-${Date.now()}`;
+        const quest = {
+          id,
+          title: template?.title || "Shared intention",
+          description: template?.description || "Draft a new micro-ritual together.",
+          reward: template?.reward || { type: "decor", id: "planter" },
+          createdAt: Date.now(),
+          completed: false,
+        };
+        state.quests.active.push(quest);
+        queueSave();
+        render();
+        return quest;
+      }
+
+      function sharedQuestComplete(id, memory) {
+        const quest = state.quests.active.find((q) => q.id === id);
+        if (!quest) return;
+        quest.completed = true;
+        quest.memory = memory;
+        state.quests.archive.push(quest);
+        state.quests.active = state.quests.active.filter((q) => q.id !== id);
+        grantQuestReward(quest.reward);
+        queueSave();
+        render();
+      }
+
+      function grantQuestReward(reward) {
+        if (!reward) return;
+        if (reward.type === "decor") {
+          const decorItem = DECOR_LIBRARY.find((d) => d.id === reward.id);
+          if (decorItem) {
+            state.room.decor.push({ id: decorItem.id, x: 0, y: 0, footprint: { w: 1, h: 1 } });
+            showToast(`Decor unlocked: ${decorItem.name}`, "success");
+          }
+        }
+        if (reward.type === "pack") {
+          state.cards.collection.push({ id: `card-${Date.now()}`, rarity: "rare", bonus: { moraleCap: 1 } });
+          showToast("Pack voucher added", "success");
+        }
+      }
+
+      function sendCompliment(text) {
+        const now = Date.now();
+        const compliments = state.compliments;
+        if (compliments.sentToday && new Date(compliments.lastSent).toDateString() === new Date(now).toDateString()) {
+          showToast("Compliment already sent today", "info");
+          return false;
+        }
+        compliments.sentToday = true;
+        compliments.lastSent = now;
+        compliments.streakUpdated = now;
+        compliments.streakDays = compliments.streakDays ? compliments.streakDays + 1 : 1;
+        if (compliments.streakDays % 7 === 0) {
+          state.credits += 120;
+          showToast("Compliment streak bonus · +120 credits", "success");
+        } else {
+          showToast("Compliment shared", "success");
+        }
+        queueSave();
+        render();
+        return true;
+      }
+
+      function acknowledgeCompliment() {
+        const compliments = state.compliments;
+        const today = new Date().toDateString();
+        if (compliments.receivedToday && new Date(compliments.lastReceived).toDateString() === today) {
+          showToast("Already acknowledged today", "info");
+          return false;
+        }
+        compliments.receivedToday = true;
+        compliments.lastReceived = Date.now();
+        state.credits += 40;
+        showToast("Compliment acknowledged · +40 credits", "success");
+        queueSave();
+        render();
+        return true;
+      }
+
+      function handleBasicAction(action) {
+        const stats = state.bear.stats;
+        let delta = { energy: 0, cleanliness: 0, morale: 0 };
+        switch (action) {
+          case "feed":
+            delta.energy = 6;
+            delta.morale = 2;
+            break;
+          case "clean":
+            delta.cleanliness = 8;
+            break;
+          case "play":
+            delta.morale = 8;
+            delta.energy = -2;
+            break;
+          case "rest":
+            delta.energy = 10;
+            delta.cleanliness = -1;
+            break;
+        }
+        let positive = [];
+        STAT_NAMES.forEach((entry) => {
+          stats[entry.key] = clamp(stats[entry.key] + (delta[entry.key] || 0), 0, statMax(entry.key));
+          if (delta[entry.key] > 0) positive.push(`+${delta[entry.key]} ${entry.label}`);
+        });
+        if (positive.length) {
+          spawnFloatingText(positive.join(" · "), { x: state.bear.pos.x, y: state.bear.pos.y });
+          showToast("Action applied", "info");
+          trackSteadyProgress(state, 1);
+          render();
+          queueSave();
+        }
+      }
+
+      function openContractsModal() {
+        const contract = state.bear.job;
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <h2 class="text-lg font-semibold text-slate-50">Contracts</h2>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-4 space-y-4">
+              ${contract && contract.id ? `
+                <div class="rounded-2xl border border-slate-700/60 bg-slate-900/50 p-4">
+                  <p class="text-sm text-slate-300">On duty: <strong>${CONTRACT_TYPES.find((c) => c.id === contract.id)?.label || "contract"}</strong></p>
+                  <p class="text-xs text-slate-400">Ends ${formatRelative(contract.contractEndsAt)}</p>
+                </div>` : ""}
+              ${CONTRACT_TYPES.map((entry) => `
+                <button data-id="${entry.id}" class="contract-option w-full rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 text-left transition hover:border-slate-500">
+                  <div class="flex items-center justify-between">
+                    <span class="text-base font-medium text-slate-100">${entry.label}</span>
+                    <span class="text-sm text-emerald-300">${entry.payout} credits</span>
+                  </div>
+                  <p class="mt-1 text-xs text-slate-400">${entry.durationMinutes} min · drains energy ${entry.energyRate} per 5 min</p>
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) {
+            modal.remove();
+          }
+        });
+        modal.querySelectorAll(".contract-option").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            assignContract(btn.dataset.id);
+            modal.remove();
+          });
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
+
+      function assignContract(id) {
+        const contract = CONTRACT_TYPES.find((c) => c.id === id);
+        if (!contract) return;
+        if (!isAdult(state)) {
+          showToast("Contracts unlock when the bear reaches adulthood", "info");
+          return;
+        }
+        state.bear.job = {
+          id: contract.id,
+          contractEndsAt: Date.now() + contract.durationMinutes * 60000,
+          payout: contract.payout,
+          startedAt: Date.now(),
+        };
+        showToast(`${contract.label} secured`, "success");
+        queueSave();
+        render();
+      }
+
+      function openPackModal() {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-3xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <h2 class="text-lg font-semibold text-slate-50">Packs</h2>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+              ${Object.entries(PACK_CATALOG).map(([key, pack]) => `
+                <div class="rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+                  <h3 class="text-lg font-semibold text-slate-50">${pack.name}</h3>
+                  <p class="mt-2 text-sm text-slate-400">${pack.draws} cards · ${pack.price} credits</p>
+                  <ul class="mt-3 space-y-1 text-xs text-slate-400">
+                    ${Object.entries(pack.odds).map(([rarity, value]) => `<li class="flex justify-between"><span class="capitalize">${rarity}</span><span>${Math.round(value * 100)}%</span></li>`).join("")}
+                  </ul>
+                  <button data-pack="${key}" class="open-pack mt-4 w-full rounded-full bg-slate-800/70 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700">Open</button>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) modal.remove();
+        });
+        modal.querySelectorAll(".open-pack").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            openPack(btn.dataset.pack);
+          });
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
+
+      function showPackReveal(pack, pulls) {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="pack-stage glass-panel w-full max-w-3xl rounded-3xl p-8">
+            <div class="flex items-start justify-between">
+              <div>
+                <h2 class="text-lg font-semibold text-slate-50">${pack.name}</h2>
+                <p class="text-sm text-slate-400">${pulls.length} reveals</p>
+              </div>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-8 grid gap-4 md:grid-cols-${pulls.length}">
+              ${pulls.map((pull, index) => `
+                <div class="relative h-52 w-full">
+                  <div class="card-flip h-full w-full border border-slate-600/40 bg-slate-900/60" data-flipped="false" data-index="${index}">
+                    <div class="card-back card-face flex items-center justify-center text-slate-200">Tap to reveal</div>
+                    <div class="card-face ${RARITY_DATA[pull.rarity].border} sheen bg-slate-800/70">
+                      <span class="text-sm uppercase tracking-[0.4em] text-slate-400">${RARITY_DATA[pull.rarity].label}</span>
+                      <div>
+                        <p class="text-lg font-semibold text-slate-50">${pull.name}</p>
+                        <p class="text-xs text-slate-300">${pull.flavor || ""}</p>
+                      </div>
+                      ${pull.duplicate ? `<span class="text-xs text-amber-300">Duplicate → Vouchers +1</span>` : ""}
+                    </div>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) modal.remove();
+          const card = ev.target.closest && ev.target.closest(".card-flip");
+          if (card) {
+            card.dataset.flipped = "true";
+          }
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
+
+      function openWardrobeModal() {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-4xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <h2 class="text-lg font-semibold text-slate-50">Wardrobe</h2>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-6 grid gap-4 md:grid-cols-5">
+              ${["head", "neck", "body", "paws", "colorway"].map((slot) => `
+                <div class="rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold capitalize text-slate-100">${slot}</h3>
+                    <button data-slot="${slot}" class="unequip text-xs text-slate-400 hover:text-slate-200">None</button>
+                  </div>
+                  <div class="mt-3 space-y-2">
+                    ${state.accessories.owned.filter((item) => item.slot === slot).map((item) => `
+                      <button data-slot="${slot}" data-id="${item.id}" class="w-full rounded-2xl border ${state.accessories.equipped[slot] === item.id ? "border-emerald-400" : "border-slate-700/60"} bg-slate-800/50 p-3 text-left text-sm text-slate-200 hover:border-emerald-400/70">
+                        <div class="flex items-center justify-between">
+                          <span>${item.name}</span>
+                          <span class="text-xs uppercase text-slate-400">${RARITY_DATA[item.rarity].label}</span>
+                        </div>
+                        <p class="text-xs text-slate-400">${item.flavor || ""}</p>
+                      </button>
+                    `).join("") || '<p class="text-xs text-slate-500">No items yet.</p>'}
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) modal.remove();
+          if (ev.target.classList.contains("unequip")) {
+            unequipAccessory(ev.target.dataset.slot);
+          }
+          const button = ev.target.closest("button[data-id]");
+          if (button) {
+            equipAccessory(button.dataset.slot, button.dataset.id);
+          }
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
+
+      function openQuestsModal() {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-3xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <h2 class="text-lg font-semibold text-slate-50">Shared Quests</h2>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-4 space-y-3" id="quest-list">
+              ${state.quests.active.map((quest) => `
+                <div class="rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+                  <h3 class="text-base font-semibold text-slate-100">${quest.title}</h3>
+                  <p class="text-sm text-slate-400">${quest.description}</p>
+                  <button data-complete="${quest.id}" class="mt-3 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30">Mark Complete</button>
+                </div>
+              `).join("") || '<p class="text-sm text-slate-500">Create a quest to keep things novel.</p>'}
+            </div>
+            <div class="mt-6 rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+              <h3 class="text-sm font-semibold text-slate-100">New Quest</h3>
+              <input id="quest-title" class="mt-2 w-full rounded-2xl bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500" placeholder="Title" />
+              <textarea id="quest-desc" class="mt-2 w-full rounded-2xl bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500" rows="2" placeholder="What will you do together?"></textarea>
+              <button id="quest-create" class="mt-3 rounded-full bg-slate-800/70 px-3 py-1 text-xs font-semibold text-slate-100 hover:bg-slate-700">Create Quest</button>
+            </div>
+            <div class="mt-6 rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+              <h3 class="text-sm font-semibold text-slate-100">Compliment Tokens</h3>
+              <p class="text-sm text-slate-400">Use once per day. Maintain a 7-day streak for bonuses. Positive interactions: <span class="font-semibold text-emerald-200">${state.compliments.streakDays || 0}</span></p>
+              <textarea id="compliment-text" class="mt-2 w-full rounded-2xl bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500" rows="2" placeholder="Share an appreciation or gratitude"></textarea>
+              <div class="mt-3 flex gap-2">
+                <button id="compliment-send" class="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30">Send Compliment</button>
+                <button id="compliment-ack" class="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-500/30">Acknowledge Received</button>
+              </div>
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) modal.remove();
+          if (ev.target.id === "quest-create") {
+            const title = modal.querySelector("#quest-title").value.trim();
+            const desc = modal.querySelector("#quest-desc").value.trim();
+            sharedQuestCreate({ title: title || undefined, description: desc || undefined });
+            modal.remove();
+          }
+          if (ev.target.dataset && ev.target.dataset.complete) {
+            sharedQuestComplete(ev.target.dataset.complete, { note: "Marked complete" });
+            modal.remove();
+          }
+          if (ev.target.id === "compliment-send") {
+            const text = modal.querySelector("#compliment-text").value.trim();
+            if (text.length > 0) {
+              sendCompliment(text);
+            }
+          }
+          if (ev.target.id === "compliment-ack") {
+            acknowledgeCompliment();
+          }
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
+
+      function openSettingsModal() {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-lg rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <h2 class="text-lg font-semibold text-slate-50">Settings</h2>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-4 space-y-4 text-sm">
+              <label class="flex items-center justify-between">
+                <span>Show KJV verse</span>
+                <input type="checkbox" id="settings-kjv" ${state.settings.showKJV ? "checked" : ""} />
+              </label>
+              <label class="flex items-center justify-between">
+                <span>SFX Volume</span>
+                <input type="range" min="0" max="1" step="0.05" id="settings-sfx" value="${state.settings.sfx}" />
+              </label>
+              <label class="flex items-center justify-between">
+                <span>Music Volume</span>
+                <input type="range" min="0" max="1" step="0.05" id="settings-music" value="${state.settings.music}" />
+              </label>
+            </div>
+          </div>
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) {
+            modal.remove();
             return;
           }
-          if (this.sleepUntil && now() >= this.sleepUntil) {
-            this.sleepUntil = null;
-            this.behavior = "idle";
-            this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
-          }
-
-          const targetPoint = this.room.tileToPoint(this.target);
-          const dx = targetPoint.x - this.pixel.x;
-          const dy = targetPoint.y - this.pixel.y;
-          const distance = Math.hypot(dx, dy);
-          const speed = CONFIG.GRID.TILE * CONFIG.BEAR_SPEED_TPS * (dt / 1000);
-
-          if (distance > 1) {
-            this.animator.setState("walk");
-            this.facing = dx >= 0 ? 1 : -1;
-            const ratio = Math.min(speed / distance, 1);
-            const eased = easeInOutQuad(ratio);
-            this.pixel.x += dx * eased;
-            this.pixel.y += dy * eased;
-          } else {
-            this.gridPosition = { ...this.target };
-            if (this.behavior === "walk") {
-              this.behavior = "idle";
-              this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
-            }
-            this.animator.setState(this.behavior);
-            this.stateTimer -= dt;
-            if (this.stateTimer <= 0) {
-              this.chooseBehavior();
-            }
-          }
-          this.animator.update(dt);
-        }
-
-        chooseBehavior() {
-          const sequence = ["stretch", "sit", "walk", "sleep", "idle"];
-          const pick = sequence[Math.floor(Math.random() * sequence.length)];
-          if (pick === "walk") {
-            this.pickNewTarget();
-          } else if (pick === "sleep") {
-            this.behavior = "sleep";
-            this.sleepUntil = now() + randomRange(...CONFIG.BEAR_SLEEP_WINDOW_MS);
-          } else {
-            this.behavior = pick;
-            this.animator.setState(pick);
-            this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
-          }
-        }
-
-        draw(ctx) {
-          ctx.save();
-          ctx.translate(this.pixel.x, this.pixel.y);
-          this.animator.draw(ctx, this.accessories, this.facing < 0);
-          ctx.restore();
-        }
+        });
+        modal.querySelector("#settings-kjv").addEventListener("change", (ev) => {
+          state.settings.showKJV = ev.target.checked;
+          render();
+          queueSave();
+        });
+        modal.querySelector("#settings-sfx").addEventListener("input", (ev) => {
+          state.settings.sfx = Number(ev.target.value);
+          queueSave();
+        });
+        modal.querySelector("#settings-music").addEventListener("input", (ev) => {
+          state.settings.music = Number(ev.target.value);
+          queueSave();
+        });
+        document.getElementById("modal-root").appendChild(modal);
       }
 
-      class EventBus {
-        constructor() {
-          this.listeners = {};
-        }
-        on(event, handler) {
-          if (!this.listeners[event]) this.listeners[event] = [];
-          this.listeners[event].push(handler);
-        }
-        off(event, handler) {
-          this.listeners[event] = (this.listeners[event] || []).filter((fn) => fn !== handler);
-        }
-        emit(event, payload) {
-          (this.listeners[event] || []).forEach((fn) => fn(payload));
-        }
-      }
-
-      class RoomEngine {
-        constructor(canvas, bus) {
-          this.canvas = canvas;
-          this.bus = bus;
-          this.ctx = canvas.getContext("2d");
-          this.decor = [];
-          this.width = CONFIG.GRID.COLS * CONFIG.GRID.TILE;
-          this.height = CONFIG.GRID.ROWS * CONFIG.GRID.TILE;
-          this.canvas.width = this.width;
-          this.canvas.height = this.height;
-          this.bear = new BearController(this);
-          this.pointer = { x: 0, y: 0 };
-          this.lastTick = now();
-          this.running = true;
-          this.setupInteractions();
-          this.loop();
-        }
-
-        setupInteractions() {
-          this.canvas.addEventListener("pointermove", (event) => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.pointer = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-            this.bus.emit("room-pointer", { ...this.pointer });
-          });
-          this.canvas.addEventListener("pointerleave", () => this.bus.emit("room-pointer-leave"));
-          this.canvas.addEventListener("pointerup", (event) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-            this.bus.emit("room-pointer-up", this.pointToTile(point));
-          });
-        }
-
-        randomTile() {
-          return {
-            col: Math.floor(Math.random() * CONFIG.GRID.COLS),
-            row: Math.floor(Math.random() * CONFIG.GRID.ROWS),
-          };
-        }
-
-        setDecor(decor) {
-          this.decor = decor;
-        }
-
-        setAccessories(accessories) {
-          this.bear.setAccessories(accessories);
-        }
-
-        tileToPoint(tile) {
-          return {
-            x: tile.col * CONFIG.GRID.TILE + CONFIG.GRID.TILE / 2,
-            y: tile.row * CONFIG.GRID.TILE + CONFIG.GRID.TILE * 0.85,
-          };
-        }
-
-        pointToTile(point) {
-          return {
-            col: clamp(Math.floor(point.x / CONFIG.GRID.TILE), 0, CONFIG.GRID.COLS - 1),
-            row: clamp(Math.floor(point.y / CONFIG.GRID.TILE), 0, CONFIG.GRID.ROWS - 1),
-          };
-        }
-
-        drawFloor(ctx) {
-          for (let row = 0; row < CONFIG.GRID.ROWS; row++) {
-            for (let col = 0; col < CONFIG.GRID.COLS; col++) {
-              const shade = (row + col) % 2 === 0 ? "rgba(30, 41, 59, 0.95)" : "rgba(15, 23, 42, 0.92)";
-              ctx.fillStyle = shade;
-              ctx.fillRect(col * CONFIG.GRID.TILE, row * CONFIG.GRID.TILE, CONFIG.GRID.TILE, CONFIG.GRID.TILE);
-              ctx.strokeStyle = "rgba(148, 163, 184, 0.1)";
-              ctx.strokeRect(col * CONFIG.GRID.TILE, row * CONFIG.GRID.TILE, CONFIG.GRID.TILE, CONFIG.GRID.TILE);
-            }
-          }
-        }
-
-        drawDecor(item) {
-          const ctx = this.ctx;
-          const pos = this.tileToPoint(item);
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
-          ctx.fillRect(-18, CONFIG.GRID.TILE * 0.35, 36, 6);
-          ctx.fillStyle = item.tint || "#38bdf8";
-          ctx.beginPath();
-          ctx.roundRect(-20, -40, 40, 52, 14);
-          ctx.fill();
-          ctx.restore();
-        }
-
-        loop() {
-          if (!this.running) return;
-          const time = now();
-          const dt = time - this.lastTick;
-          this.lastTick = time;
-          this.update(dt);
-          this.render();
-          requestAnimationFrame(() => this.loop());
-        }
-
-        update(dt) {
-          this.bear.update(dt);
-        }
-
-        render() {
-          const ctx = this.ctx;
-          ctx.clearRect(0, 0, this.width, this.height);
-          this.drawFloor(ctx);
-          const entities = [
-            ...this.decor.map((item) => ({ type: "decor", item })),
-            { type: "bear", item: this.bear },
-          ];
-          entities.sort((a, b) => {
-            const ay = a.type === "bear" ? this.bear.pixel.y : this.tileToPoint(a.item).y;
-            const by = b.type === "bear" ? this.bear.pixel.y : this.tileToPoint(b.item).y;
-            return ay - by;
-          });
-          for (const entry of entities) {
-            if (entry.type === "decor") {
-              this.drawDecor(entry.item);
-            } else {
-              ctx.save();
-              ctx.translate(this.bear.pixel.x, this.bear.pixel.y);
-              this.bear.animator.draw(ctx, this.bear.accessories, this.bear.facing < 0);
-              ctx.restore();
-            }
-          }
-        }
-      }
-      const loadState = () => {
-        try {
-          const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
-          if (!raw) return baseGameState();
-          const parsed = JSON.parse(raw);
-          return { ...baseGameState(), ...parsed };
-        } catch (error) {
-          console.warn("Failed to read save", error);
-          return baseGameState();
-        }
-      };
-
-      const saveState = (state) => {
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
-      };
-
-      const mirrorToFirebase = async (state) => {
-        if (!window.BEAR_FIREBASE_CONFIG) return;
-        if (!window.firebase) return;
-        try {
-          if (!window.firebase.apps.length) {
-            window.firebase.initializeApp(window.BEAR_FIREBASE_CONFIG);
-          }
-          const firestore = window.firebase.firestore();
-          await firestore.collection(CONFIG.FIREBASE_COLLECTION).doc("profile").set(state, { merge: true });
-        } catch (error) {
-          console.warn("Firebase mirror skipped", error);
-        }
-      };
-
-      class PackEngine {
-        constructor(stateRef, setState) {
-          this.stateRef = stateRef;
-          this.setState = setState;
-        }
-
-        openPack(key) {
-          const pack = CONFIG.PACK_TYPES[key];
-          if (!pack) return [];
-          const state = this.stateRef.current;
-          if (state.credits < pack.price) return [];
-          state.credits -= pack.price;
-          const results = [];
-          const guaranteeIndex = pack.guaranteedAccessory ? Math.floor(Math.random() * pack.draws) : -1;
-          for (let i = 0; i < pack.draws; i++) {
-            const rarity = i === guaranteeIndex
-              ? weightedPick({ Rare: 45, Epic: 35, Legendary: 20 })
-              : weightedPick(pack.rarityWeights);
-            const dropAccessory = pack.guaranteedAccessory && i === guaranteeIndex ? true : Math.random() < 0.35;
-            if (dropAccessory) {
-              const pool = CONFIG.ACCESSORY_LIBRARY.filter((acc) => acc.rarity === rarity);
-              const accessory = pool[Math.floor(Math.random() * pool.length)] || CONFIG.ACCESSORY_LIBRARY[0];
-              const inventory = state.accessories.inventory.find((item) => item.id === accessory.id);
-              let duplicate = false;
-              if (inventory) {
-                if (inventory.quantity > 0) duplicate = true;
-                inventory.quantity += 1;
-              } else {
-                state.accessories.inventory.push({ ...accessory, quantity: 1 });
-              }
-              if (duplicate) {
-                const voucherGain = rarity === "Legendary" ? 12 : rarity === "Epic" ? 8 : rarity === "Rare" ? 5 : 2;
-                state.vouchers += voucherGain;
-                state.toast.push({ id: `voucher-${Date.now()}-${i}`, message: `Duplicate → Vouchers +${voucherGain}` });
-              }
-              results.push({ type: "accessory", rarity, accessory, duplicate });
-            } else {
-              const credits = Math.floor(lerp(40, 200, Math.random()));
-              state.credits += credits;
-              state.lifetime.creditsEarned += credits;
-              results.push({ type: "credit", rarity, credits });
-            }
-          }
-          this.setState({ ...state });
-          return results;
-        }
-      }
-
-      const defaultMiniGameState = () => ({
-        active: false,
-        id: null,
-        startTime: null,
-        score: 0,
-        data: {},
-        reward: 0,
-      });
-      const StatBar = ({ label, value, tone }) => (
-        <div className="mb-4">
-          <div className="mb-1 flex justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
-            <span>{label}</span>
-            <span>{Math.round(value)}</span>
-          </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
-            <div className={`h-full ${tone}`} style={{ width: `${clamp(value, 0, 100)}%`, transition: "width 0.6s ease" }}></div>
-          </div>
-        </div>
-      );
-
-      const StatsPanel = ({ stats, decor, onQuickCare, canAfford }) => {
-        const moraleCap = moraleMax(decor);
-        return (
-          <div className="glass rounded-3xl p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-100">Vitals</h2>
-              <button
-                onClick={onQuickCare}
-                disabled={!canAfford}
-                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
-                  canAfford ? "bg-emerald-500/90 text-emerald-50 hover:bg-emerald-400" : "bg-slate-700 text-slate-500"
-                }`}
-              >
-                Quick Care · 40 Credits
-              </button>
-            </div>
-            <div className="mt-4">
-              <StatBar label="Energy" value={stats.energy} tone="bg-emerald-400" />
-              <StatBar label="Cleanliness" value={stats.cleanliness} tone="bg-cyan-400" />
-              <StatBar label={`Morale (cap ${moraleCap})`} value={(stats.morale / moraleCap) * 100} tone="bg-amber-400" />
-            </div>
-          </div>
-        );
-      };
-
-      const CurrencyPanel = ({ credits, vouchers }) => (
-        <div className="glass rounded-3xl p-6">
-          <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-            <span>Ledger</span>
-            <span>Reserves</span>
-          </div>
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center justify-between text-lg font-semibold text-slate-100">
-              <span>Credits</span>
-              <span>{Math.round(credits)}</span>
-            </div>
-            <div className="flex items-center justify-between text-lg font-semibold text-slate-100">
-              <span>Vouchers</span>
-              <span>{Math.round(vouchers)}</span>
-            </div>
-          </div>
-        </div>
-      );
-
-      const ContractPanel = ({ contract, onStart, onCancel }) => (
-        <div className="glass rounded-3xl p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-100">Contracts</h2>
-            {contract && (
-              <button onClick={onCancel} className="text-xs uppercase tracking-[0.3em] text-rose-300">
-                Cancel
-              </button>
-            )}
-          </div>
-          <div className="mt-4 space-y-4">
-            {CONFIG.CONTRACTS.map((job) => {
-              const active = contract && contract.id === job.id;
-              const remaining = active ? Math.max(0, contract.endsAt - now()) : 0;
-              const minutes = Math.ceil(remaining / 60000);
-              return (
-                <div key={job.id} className={`rounded-2xl border border-slate-600/40 p-4 ${active ? "bg-slate-800/60" : "bg-slate-900/40"}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-100">{job.label}</div>
-                      <div className="text-xs text-slate-400">Energy −{job.energyCost} · {job.durationMinutes}m</div>
-                    </div>
-                    <div className="text-sm font-semibold text-amber-300">+{job.payout} cr</div>
-                  </div>
-                  <div className="mt-2">
-                    {active ? (
-                      <div className="text-xs text-slate-400">{minutes} minutes remaining</div>
-                    ) : (
-                      <button
-                        onClick={() => onStart(job)}
-                        className="mt-2 rounded-full bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-200 hover:bg-slate-600"
-                      >
-                        Launch Contract
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-
-      const DecorOverlay = ({ decor, onMove, onSell }) => (
-        <div className="pointer-events-none absolute inset-0">
-          {decor.map((item) => (
-            <div
-              key={item.uid}
-              style={{ left: item.col * CONFIG.GRID.TILE, top: item.row * CONFIG.GRID.TILE, width: CONFIG.GRID.TILE, height: CONFIG.GRID.TILE }}
-              className="pointer-events-auto absolute"
-            >
-              <div className="absolute inset-x-6 top-3 flex items-center justify-between rounded-full bg-slate-900/70 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-slate-300 opacity-0 transition hover:opacity-100">
-                <button onPointerDown={(e) => { e.stopPropagation(); onMove(item); }} className="hover:text-emerald-200">
-                  Move
-                </button>
-                <span className="mx-1 text-slate-500">•</span>
-                <button onPointerDown={(e) => { e.stopPropagation(); onSell(item); }} className="hover:text-rose-300">
-                  Sell
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-      const DecorCatalog = ({ onBeginDrag }) => (
-        <div className="glass h-full rounded-3xl p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-100">Decor Catalog</h2>
-            <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Morale Caps</span>
-          </div>
-          <div className="mt-4 space-y-3">
-            {CONFIG.DECOR_CATALOG.map((item) => (
-              <button
-                key={item.id}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  onBeginDrag({ ...item, uid: `decor-${item.id}-${Date.now()}`, isNew: true });
-                }}
-                className="flex w-full items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-900/40 p-4 text-left transition hover:border-slate-500"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-slate-100">{item.name}</div>
-                  <div className="text-xs text-slate-400">{item.note}</div>
-                </div>
-                <div className="text-sm font-semibold text-amber-300">{item.value} cr</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-
-      const PackButton = ({ pack, onOpen }) => (
-        <button
-          onClick={onOpen}
-          className="relative flex flex-col rounded-3xl border border-slate-600/40 bg-slate-900/50 p-6 text-left transition hover:border-slate-400"
-        >
-          <span className="text-xs uppercase tracking-[0.4em] text-slate-500">{pack.name}</span>
-          <span className="mt-2 text-2xl font-semibold text-slate-100">{pack.price} cr</span>
-          <span className="mt-3 text-xs text-slate-400">{pack.draws} cards · {pack.guaranteedAccessory ? "Accessory guaranteed" : "Accessory chance"}</span>
-        </button>
-      );
-
-      const PackReveal = ({ results, onClose }) => (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass pack-parallax relative w-full max-w-3xl rounded-3xl p-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-100">Pack Reveal</h2>
-              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                Close
-              </button>
-            </div>
-            <div className="mt-8 flex flex-wrap justify-center gap-6">
-              {results.map((drop, index) => (
-                <div
-                  key={index}
-                  className={`card-shimmer relative h-48 w-32 overflow-hidden rounded-2xl border border-slate-500/40 ${
-                    drop.rarity === "Legendary"
-                      ? "rarity-legendary"
-                      : drop.rarity === "Epic"
-                      ? "rarity-epic"
-                      : drop.rarity === "Rare"
-                      ? "rarity-rare"
-                      : "rarity-common"
-                  }`}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5"></div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
-                    <span className="text-xs uppercase tracking-[0.4em] text-slate-300">{drop.rarity}</span>
-                    {drop.type === "credit" ? (
-                      <>
-                        <span className="text-2xl font-semibold text-emerald-200">+{drop.credits}</span>
-                        <span className="text-xs text-slate-400">Credits</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-sm font-semibold text-slate-100">{drop.accessory.name}</span>
-                        <span className="text-xs text-slate-400">{drop.accessory.slot}</span>
-                        {drop.duplicate && <span className="mt-1 text-[10px] uppercase tracking-[0.3em] text-amber-300">Converted to vouchers</span>}
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-      const AccessorySlot = ({ label, slot, equipped, inventory, onEquip }) => {
-        const current = equipped[slot];
-        return (
-          <div className="rounded-2xl border border-slate-700/40 bg-slate-900/40 p-4">
-            <div className="text-xs uppercase tracking-[0.3em] text-slate-500">{label}</div>
-            <div className="mt-2 text-sm font-semibold text-slate-100">{current ? current.name : "None"}</div>
-            <div className="mt-3 space-y-2">
-              {inventory
-                .filter((item) => item.slot === slot && item.quantity > 0)
-                .map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => onEquip(slot, item)}
-                    className={`flex w-full items-center justify-between rounded-full px-3 py-1 text-xs uppercase tracking-[0.3em] ${
-                      current && current.id === item.id ? "bg-emerald-500/30 text-emerald-100" : "bg-slate-800 text-slate-300"
-                    }`}
-                  >
-                    <span>{item.name}</span>
-                    <span className="text-[10px] text-slate-400">{item.rarity}</span>
-                  </button>
-                ))}
-            </div>
-          </div>
-        );
-      };
-
-      const WardrobeModal = ({ inventory, equipped, onClose, onEquip }) => (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="glass relative w-full max-w-4xl rounded-3xl p-8">
-            <div className="flex items-start justify-between">
+      function openMiniGameModal(game) {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-100">Wardrobe</h2>
-                <p className="text-xs text-slate-400">Tailor the bear's profile with understated accessories.</p>
+                <h2 class="text-lg font-semibold text-slate-50">${game.name}</h2>
+                <p class="text-sm text-slate-400">${game.desc}</p>
               </div>
-              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                Close
-              </button>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-5">
-              <AccessorySlot label="Head" slot="head" inventory={inventory} equipped={equipped} onEquip={onEquip} />
-              <AccessorySlot label="Neck" slot="neck" inventory={inventory} equipped={equipped} onEquip={onEquip} />
-              <AccessorySlot label="Body" slot="body" inventory={inventory} equipped={equipped} onEquip={onEquip} />
-              <AccessorySlot label="Paws" slot="paws" inventory={inventory} equipped={equipped} onEquip={onEquip} />
-              <AccessorySlot label="Colorway" slot="colorway" inventory={inventory} equipped={equipped} onEquip={onEquip} />
-            </div>
+            <canvas id="mini-game-canvas" class="mt-6 h-48 w-full rounded-3xl bg-slate-950/70"></canvas>
+            <button id="mini-game-play" class="mt-6 w-full rounded-full bg-emerald-500/20 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/30">Start</button>
           </div>
-        </div>
-      );
+        `;
+        const canvas = modal.querySelector("#mini-game-canvas");
+        const ctx = canvas.getContext("2d");
+        let running = false;
+        const moraleBonus = state.bear.stats.morale >= 80 ? 1.1 : 1;
+        canvas.width = 600;
+        canvas.height = 180;
 
-      const MilestonesPanel = ({ milestones, definitions, onClaim }) => (
-        <div className="glass rounded-3xl p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-100">Milestones</h2>
-            <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Progress</span>
-          </div>
-          <div className="mt-4 space-y-4">
-            {definitions.map((definition) => {
-              const record = milestones.find((entry) => entry.id === definition.id);
-              const achieved = record?.achieved;
-              const claimed = record?.claimed;
-              return (
-                <div key={definition.id} className="rounded-2xl border border-slate-600/40 bg-slate-900/40 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-100">{definition.name}</div>
-                      <div className="text-xs text-slate-400">{definition.description}</div>
-                    </div>
-                    <div className="text-xs text-amber-300">
-                      {definition.reward.credits ? `${definition.reward.credits} credits` : "Standard Pack"}
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="text-xs text-slate-500">Status: {achieved ? "Completed" : "In progress"}</div>
-                    {achieved && !claimed && (
-                      <button
-                        onClick={() => onClaim(definition)}
-                        className="rounded-full bg-emerald-500/70 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-50"
-                      >
-                        Claim
-                      </button>
-                    )}
-                    {claimed && <span className="text-xs text-slate-500">Claimed</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
+        function drawRhythm(timestamp) {
+          if (!running) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#1e293b";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#38bdf8";
+          const beat = (timestamp / 400) % canvas.width;
+          ctx.fillRect(beat, 0, 6, canvas.height);
+          requestAnimationFrame(drawRhythm);
+        }
 
-      const VerseDisplay = ({ show, verse }) => {
-        if (!show) return null;
-        return (
-          <div className="mt-4 rounded-2xl border border-slate-600/40 bg-slate-900/60 p-4 text-sm font-serif text-slate-200">
-            “{verse.text}” — {verse.ref} (KJV)
-          </div>
-        );
-      };
-      const SideGigsPanel = ({ usage, onLaunch }) => {
-        const nowTime = now();
-        return (
-          <div className="glass rounded-3xl p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-100">Side Gigs</h2>
-              <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Mini-games</span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {CONFIG.MINI_GAMES.map((game) => {
-                const record = usage[game.id] || { history: [] };
-                const perHour = record.history.filter((stamp) => nowTime - stamp < 3600000).length;
-                const perDay = record.history.filter((stamp) => nowTime - stamp < 86400000).length;
-                const exhausted = game.disabled || perHour >= CONFIG.MINI_GAME_LIMITS.perHour || perDay >= CONFIG.MINI_GAME_LIMITS.perDay;
-                return (
-                  <div key={game.id} className="rounded-2xl border border-slate-700/40 bg-slate-900/40 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-100">{game.name}</div>
-                        <div className="text-xs text-slate-400">{game.description}</div>
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {perHour}/{CONFIG.MINI_GAME_LIMITS.perHour} this hour · {perDay}/{CONFIG.MINI_GAME_LIMITS.perDay} today
-                      </div>
-                    </div>
-                    <button
-                      disabled={exhausted}
-                      onClick={() => onLaunch(game)}
-                      className={`mt-3 rounded-full px-3 py-1 text-xs uppercase tracking-[0.3em] ${
-                        exhausted ? "bg-slate-800 text-slate-600" : "bg-indigo-500/80 text-indigo-50 hover:bg-indigo-400"
-                      }`}
-                    >
-                      {game.disabled ? "In Development" : exhausted ? "Rest Required" : "Enter Gig"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      };
-      const ToastStack = ({ toasts, onDismiss }) => (
-        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 flex-col gap-3">
-          {toasts.map((toast) => (
-            <div key={toast.id} className="toast-enter pointer-events-auto rounded-2xl bg-slate-900/90 px-4 py-3 text-sm text-slate-100 shadow-xl ring-1 ring-slate-700/50">
-              <div className="flex items-center justify-between">
-                <span>{toast.message}</span>
-                <button onClick={() => onDismiss(toast.id)} className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                  Close
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-      const SettingsModal = ({ settings, onToggleVerse, onVolumeChange, onClose }) => (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="glass w-full max-w-lg rounded-3xl p-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-100">Settings</h2>
-                <p className="text-xs text-slate-400">Dial the ambience and verse display.</p>
-              </div>
-              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                Close
-              </button>
-            </div>
-            <div className="mt-6 space-y-6">
-              <label className="flex items-center justify-between text-sm text-slate-200">
-                <span>Show KJV verse overlay</span>
-                <input type="checkbox" checked={settings.showKJV} onChange={(event) => onToggleVerse(event.target.checked)} />
-              </label>
-              <div>
-                <div className="text-sm text-slate-200">Ambient volume</div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={settings.volume}
-                  onChange={(event) => onVolumeChange(parseFloat(event.target.value))}
-                  className="mt-2 w-full"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-      const MiniGameModal = ({ game, onComplete, onClose }) => {
-        const canvasRef = useRef(null);
-        const [uiState, setUiState] = useState({ time: CONFIG.MINI_GAME_LIMITS.durationSeconds, score: 0, detail: "" });
-        useEffect(() => {
-          if (!game || game.disabled) return;
-          const canvas = canvasRef.current;
-          const ctx = canvas.getContext("2d");
-          canvas.width = 500;
-          canvas.height = 320;
-          const duration = CONFIG.MINI_GAME_LIMITS.durationSeconds;
-          const start = performance.now();
-          let running = true;
-          const state = { score: 0, streak: 0, taps: [], beatIndex: 0, lane: 1, obstacles: [], pointer: 0, direction: 1 };
+        function drawFishing(timestamp) {
+          if (!running) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const zoneWidth = 80;
+          const zoneX = canvas.width / 2 - zoneWidth / 2;
+          ctx.fillStyle = "#22d3ee";
+          ctx.fillRect(zoneX, 30, zoneWidth, 120);
+          const pointer = (Math.sin(timestamp / 300) * 0.5 + 0.5) * (canvas.width - 40) + 20;
+          ctx.fillStyle = "#f59e0b";
+          ctx.fillRect(pointer, 20, 4, 140);
+          requestAnimationFrame(drawFishing);
+        }
 
-          const beatTimes = Array.from({ length: duration }, (_, i) => i + 1);
+        function drawCourier(timestamp) {
+          if (!running) return;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const laneHeight = canvas.height / 3;
+          ctx.fillStyle = "#1e293b";
+          for (let i = 1; i < 3; i++) {
+            ctx.fillRect(0, laneHeight * i - 1, canvas.width, 2);
+          }
+          ctx.fillStyle = "#f97316";
+          const playerLane = Math.floor((timestamp / 600) % 3);
+          ctx.fillRect(40, laneHeight * playerLane + 20, 32, 32);
+          requestAnimationFrame(drawCourier);
+        }
 
-          const handleTap = () => {
-            if (game.id === "timberline") {
-              const currentTime = (performance.now() - start) / 1000;
-              const nextBeat = beatTimes[state.beatIndex] || duration;
-              const delta = Math.abs(currentTime - nextBeat);
-              if (delta < 0.2) {
-                state.streak += 1;
-                state.score += 12 + state.streak * 2;
-                state.detail = "On beat";
-                state.beatIndex += 1;
-              } else if (delta < 0.4) {
-                state.streak = Math.max(0, state.streak - 1);
-                state.score += 6;
-                state.detail = "Close";
-                state.beatIndex += 1;
-              } else {
-                state.streak = 0;
-                state.detail = "Miss";
-              }
-            } else if (game.id === "riverside") {
-              const closeness = 1 - Math.abs(state.pointer - 0.5) * 2;
-              const haul = Math.max(0, closeness);
-              state.score += Math.round(haul * 35 + Math.random() * 20);
-              state.detail = haul > 0.75 ? "Golden catch" : haul > 0.4 ? "Solid pull" : "Light nibble";
-            }
-          };
-
-          const keyHandler = (event) => {
-            if (game.id === "courier") {
-              if (event.key === "ArrowLeft" || event.key === "a") {
-                state.lane = Math.max(0, state.lane - 1);
-              } else if (event.key === "ArrowRight" || event.key === "d") {
-                state.lane = Math.min(2, state.lane + 1);
-              }
-            }
-            if (event.key === " " || event.key === "Enter") {
-              handleTap();
-            }
-          };
-
-          const pointerHandler = () => handleTap();
-
-          window.addEventListener("keydown", keyHandler);
-          canvas.addEventListener("pointerdown", pointerHandler);
-
-          const spawnObstacle = () => {
-            const lane = Math.floor(Math.random() * 3);
-            state.obstacles.push({ lane, y: -40 });
-          };
-          let obstacleTimer = 0;
-
-          const loop = (timestamp) => {
+        modal.querySelector("#mini-game-play").addEventListener("click", () => {
+          if (running) return;
+          running = true;
+          const end = Date.now() + 60000;
+          const loop = () => {
             if (!running) return;
-            const elapsed = (timestamp - start) / 1000;
-            const remaining = Math.max(0, duration - elapsed);
-            if (game.id === "riverside") {
-              state.pointer += state.direction * 0.008 * (1 + elapsed * 0.02);
-              if (state.pointer <= 0) {
-                state.pointer = 0;
-                state.direction = 1;
-              } else if (state.pointer >= 1) {
-                state.pointer = 1;
-                state.direction = -1;
-              }
-            }
-            if (game.id === "courier") {
-              obstacleTimer += 16;
-              if (obstacleTimer > 700) {
-                obstacleTimer = 0;
-                spawnObstacle();
-              }
-              state.obstacles.forEach((obstacle) => {
-                obstacle.y += 2.6 + elapsed * 0.01;
-              });
-              state.obstacles = state.obstacles.filter((obstacle) => obstacle.y < canvas.height + 40);
-              state.score += 0.6;
-              const collision = state.obstacles.find((obstacle) => obstacle.lane === state.lane && obstacle.y > 220 && obstacle.y < 260);
-              if (collision) {
-                state.score = Math.max(0, state.score - 40);
-                state.detail = "Glancing hit";
-                obstacle.y = canvas.height + 50;
-              }
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#0f172a";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            if (game.id === "timberline") {
-              ctx.strokeStyle = "#334155";
-              ctx.lineWidth = 6;
-              ctx.beginPath();
-              ctx.arc(canvas.width / 2, canvas.height / 2, 90, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.fillStyle = "#38bdf8";
-              const beatProgress = (elapsed % 1);
-              ctx.beginPath();
-              ctx.arc(canvas.width / 2, canvas.height / 2, 90, -Math.PI / 2, -Math.PI / 2 + beatProgress * Math.PI * 2);
-              ctx.stroke();
-              ctx.fillStyle = "#fcd34d";
-              ctx.beginPath();
-              ctx.arc(canvas.width / 2, canvas.height / 2, 10 + 20 * (1 - beatProgress), 0, Math.PI * 2);
-              ctx.fill();
-            } else if (game.id === "riverside") {
-              ctx.fillStyle = "#1e293b";
-              ctx.fillRect(60, 120, canvas.width - 120, 80);
-              ctx.fillStyle = "#0ea5e9";
-              ctx.fillRect(60, 150, canvas.width - 120, 20);
-              ctx.fillStyle = "#fcd34d";
-              const pointerX = 60 + state.pointer * (canvas.width - 120);
-              ctx.fillRect(pointerX - 6, 110, 12, 100);
-              ctx.fillStyle = "rgba(148, 163, 184, 0.3)";
-              ctx.fillRect(canvas.width / 2 - 20, 120, 40, 80);
-            } else if (game.id === "courier") {
-              ctx.fillStyle = "#1e293b";
-              ctx.fillRect(140, 40, 220, 240);
-              ctx.strokeStyle = "#334155";
-              ctx.beginPath();
-              ctx.moveTo(213, 40);
-              ctx.lineTo(213, 280);
-              ctx.moveTo(287, 40);
-              ctx.lineTo(287, 280);
-              ctx.stroke();
-              ctx.fillStyle = "#38bdf8";
-              const laneX = [170, 244, 318][state.lane];
-              ctx.fillRect(laneX - 20, 220, 40, 40);
-              ctx.fillStyle = "#f87171";
-              state.obstacles.forEach((obstacle) => {
-                const ox = [170, 244, 318][obstacle.lane];
-                ctx.fillRect(ox - 18, obstacle.y, 36, 36);
-              });
-            }
-
-            setUiState({ time: remaining, score: state.score, detail: state.detail || "" });
-
+            const remaining = end - Date.now();
             if (remaining <= 0) {
               running = false;
-              const normalized = Math.min(1, state.score / 300);
-              const reward = Math.round(lerp(game.minReward, game.maxReward, normalized));
-              window.removeEventListener("keydown", keyHandler);
-              canvas.removeEventListener("pointerdown", pointerHandler);
-              onComplete({ reward, score: Math.round(state.score) });
+              const payout = Math.floor(90 * moraleBonus);
+              state.credits += payout;
+              state.miniGames.playsToday[game.id] = (state.miniGames.playsToday[game.id] || 0) + 1;
+              state.miniGames.lastPlayedAt[game.id] = Date.now();
+              if (game.id === "rhythm" && payout >= 99) {
+                state.miniGames.history.rhythmPerfect = true;
+              }
+              showToast(`${game.name} complete · +${payout} credits`, "success");
+              modal.remove();
+              queueSave();
+              render();
               return;
             }
+            modal.querySelector("#mini-game-play").textContent = `Playing · ${Math.ceil(remaining / 1000)}s`;
             requestAnimationFrame(loop);
           };
+          switch (game.id) {
+            case "rhythm":
+              requestAnimationFrame(drawRhythm);
+              break;
+            case "fish":
+              requestAnimationFrame(drawFishing);
+              break;
+            case "courier":
+              requestAnimationFrame(drawCourier);
+              break;
+          }
           requestAnimationFrame(loop);
-          return () => {
+        });
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) {
             running = false;
-            window.removeEventListener("keydown", keyHandler);
-            canvas.removeEventListener("pointerdown", pointerHandler);
-          };
-        }, [game]);
+            modal.remove();
+          }
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
 
-        if (!game) return null;
-        return (
-          <div className="mini-game-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-            <div className="glass w-full max-w-3xl rounded-3xl p-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-100">{game.name}</h2>
-                  <p className="text-xs text-slate-400">{game.description}</p>
-                </div>
-                <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                  Exit
-                </button>
+      function render() {
+        document.getElementById("bear-name").textContent = state.bear.name;
+        const rarity = RARITY_DATA[state.bear.rarity] || RARITY_DATA.common;
+        const rarityBadge = document.getElementById("bear-rarity");
+        rarityBadge.textContent = rarity.label;
+        rarityBadge.className = `rounded-full px-3 py-1 text-xs uppercase tracking-wide ${rarity.badge}`;
+        document.getElementById("bear-stage").textContent = state.bear.stage.toUpperCase();
+        document.getElementById("bear-duty").textContent = isOnDuty(state) ? "On Duty" : "Off Duty";
+        document.getElementById("bear-duty").className = `rounded-full px-3 py-1 text-xs uppercase tracking-wide ${isOnDuty(state) ? "border border-emerald-500/60 text-emerald-200" : "border border-slate-600/60 text-slate-300"}`;
+        document.getElementById("credits").textContent = Math.floor(state.credits);
+        document.getElementById("vouchers").textContent = state.vouchers;
+        renderStats();
+        renderMiniGames();
+        renderMilestones();
+        renderDecor();
+        renderVerse();
+      }
+
+      function renderStats() {
+        const statsWrapper = document.getElementById("stats");
+        statsWrapper.innerHTML = "";
+        STAT_NAMES.forEach((entry) => {
+          const value = Math.round(state.bear.stats[entry.key]);
+          const max = statMax(entry.key);
+          const percent = Math.max(0, Math.min(100, (value / max) * 100));
+          const container = document.createElement("div");
+          container.innerHTML = `
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span>${entry.label}</span>
+              <span>${value} / ${max}</span>
+            </div>
+            <div class="stat-bar mt-1 h-3 w-full overflow-hidden rounded-full bg-slate-900/60">
+              <div class="h-full bg-gradient-to-r ${entry.tone}" style="width: ${percent}%"></div>
+            </div>
+          `;
+          statsWrapper.appendChild(container);
+        });
+      }
+
+      function renderMiniGames() {
+        const list = document.getElementById("mini-game-list");
+        list.innerHTML = "";
+        let totalToday = Object.values(state.miniGames.playsToday).reduce((a, b) => a + b, 0);
+        document.getElementById("sidegig-remaining").textContent = `${Math.max(0, 5 - totalToday)} left today`;
+        MINI_GAMES.forEach((game) => {
+          const plays = state.miniGames.playsToday[game.id] || 0;
+          const card = document.createElement("button");
+          card.disabled = game.stub;
+          card.className = `text-left rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4 transition hover:border-slate-500 ${game.stub ? "opacity-60" : ""}`;
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-100">${game.name}</p>
+                <p class="text-xs text-slate-400">${game.desc}</p>
               </div>
-              <div className="mt-6 flex flex-col items-center gap-4">
-                <canvas ref={canvasRef} className="bg-slate-950" width="500" height="320"></canvas>
-                <div className="flex w-full justify-between text-sm text-slate-300">
-                  <span>Time: {Math.ceil(uiState.time)}s</span>
-                  <span>Score: {Math.round(uiState.score)}</span>
-                  <span>{uiState.detail}</span>
-                </div>
-                <div className="text-xs text-slate-500">Tap / Space for Rhythm & Fishing · Arrow keys for Courier</div>
+              <span class="text-xs text-slate-400">${plays}/${game.maxPerDay}${game.stub ? " · Soon" : ""}</span>
+            </div>
+          `;
+          if (!game.stub) {
+            card.addEventListener("click", () => playMiniGame(game.id));
+          }
+          list.appendChild(card);
+        });
+      }
+
+      function renderMilestones() {
+        const container = document.getElementById("milestones");
+        container.innerHTML = "";
+        Object.entries(MILESTONE_DEFS).forEach(([key, milestone]) => {
+          const status = state.milestones[key] || { unlocked: false, claimed: false };
+          const unlocked = milestone.check(state);
+          if (unlocked && !status.unlocked) {
+            state.milestones[key] = { unlocked: true, claimed: status.claimed || false };
+            status.unlocked = true;
+            showToast(`Milestone unlocked: ${milestone.name}`, "success");
+          }
+          const finalStatus = state.milestones[key] || status;
+          const row = document.createElement("div");
+          row.className = "rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4";
+          row.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-100">${milestone.name}</p>
+                <p class="text-xs text-slate-400">${milestone.description}</p>
               </div>
+              <span class="text-xs text-emerald-200">${milestone.reward}</span>
+            </div>
+            <div class="mt-2 text-xs text-slate-400">${unlocked ? (finalStatus.claimed ? "Claimed" : "Ready") : "In progress"}</div>
+          `;
+          if (unlocked && !finalStatus.claimed) {
+            const btn = document.createElement("button");
+            btn.textContent = "Claim";
+            btn.className = "mt-3 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30";
+            btn.addEventListener("click", () => {
+              claimMilestone(key, milestone.reward);
+            });
+            row.appendChild(btn);
+          }
+          container.appendChild(row);
+        });
+      }
+
+      function renderVerse() {
+        const verseLine = document.getElementById("kjv-line");
+        if (state.settings.showKJV) {
+          const verse = state.versesKJV[Math.floor(Math.random() * state.versesKJV.length)];
+          verseLine.textContent = verse || "";
+          verseLine.classList.remove("hidden");
+        } else {
+          verseLine.classList.add("hidden");
+        }
+      }
+
+      function renderDecor() {
+        roomGrid.querySelectorAll(".decor-item").forEach((node) => node.remove());
+        const rect = roomGrid.getBoundingClientRect();
+        const tileW = rect.width / GRID_CONFIG.cols;
+        const tileH = rect.height / GRID_CONFIG.rows;
+        if (!tileW || !tileH) return;
+        state.room.decor.forEach((decor, index) => {
+          const item = DECOR_LIBRARY.find((d) => d.id === decor.id);
+          const node = document.createElement("div");
+          node.className = "decor-item";
+          node.dataset.index = index;
+          node.style.left = `${decor.x * tileW + tileW * 0.1}px`;
+          node.style.top = `${decor.y * tileH + tileH * 0.1}px`;
+          node.style.zIndex = 10 + decor.y;
+          node.textContent = item ? item.name.split(" ")[0] : decor.id;
+          node.addEventListener("pointerdown", (ev) => {
+            if (ev.button !== 0) return;
+            ev.preventDefault();
+            startDecorDrag({ mode: "move", index, item });
+            updateDecorGhost(ev.clientX, ev.clientY);
+          });
+          roomGrid.appendChild(node);
+        });
+      }
+
+      function claimMilestone(key, reward) {
+        const status = state.milestones[key] || { unlocked: false, claimed: false };
+        if (status.claimed) return;
+        state.milestones[key] = { unlocked: true, claimed: true };
+        if (reward.includes("Credits")) {
+          const amount = parseInt(reward.replace(/[^0-9]/g, ""), 10) || 0;
+          state.credits += amount;
+        }
+        if (reward.includes("Standard Pack")) {
+          showToast("Standard pack granted", "success");
+          grantPack("standard");
+        }
+        if (reward.includes("Elite Decor")) {
+          state.room.decor.push({ id: "espresso", x: 1, y: 1, footprint: { w: 1, h: 1 } });
+          showToast("Elite decor delivered", "success");
+        }
+        queueSave();
+        render();
+      }
+
+      function grantPack(type) {
+        const pack = PACK_CATALOG[type];
+        if (!pack) return;
+        const pulls = [];
+        for (let i = 0; i < pack.draws; i++) {
+          const rarity = rollRarity(pack.odds);
+          const pool = ACCESSORY_LIBRARY.filter((item) => item.rarity === rarity);
+          const drawn = pool[Math.floor(Math.random() * pool.length)] || ACCESSORY_LIBRARY[Math.floor(Math.random() * ACCESSORY_LIBRARY.length)];
+          const owned = state.accessories.owned.find((item) => item.id === drawn.id);
+          if (!owned) {
+            state.accessories.owned.push({ ...drawn });
+            pulls.push({ ...drawn, duplicate: false });
+          } else {
+            state.vouchers += 1;
+            pulls.push({ ...drawn, duplicate: true });
+          }
+        }
+        queueSave();
+        render();
+        showPackReveal(pack, pulls);
+      }
+
+      function openDecorModal() {
+        const modal = document.createElement("div");
+        modal.className = "modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-6";
+        modal.innerHTML = `
+          <div class="glass-panel w-full max-w-2xl rounded-3xl p-6">
+            <div class="flex items-start justify-between">
+              <div>
+                <h2 class="text-lg font-semibold text-slate-50">Decor Inventory</h2>
+                <p class="text-sm text-slate-400">Drag an item into the den to place it.</p>
+              </div>
+              <button class="text-slate-400 hover:text-slate-100" id="modal-close">Close</button>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+              ${DECOR_LIBRARY.map((item) => `
+                <div class="rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-100">${item.name}</h3>
+                    <span class="text-xs text-slate-400">${item.boosts.moraleCap ? `+${item.boosts.moraleCap} morale cap` : "Room accent"}</span>
+                  </div>
+                  <button data-id="${item.id}" class="mt-3 w-full rounded-full bg-slate-800/70 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200 hover:bg-slate-700">Drag to Place</button>
+                </div>
+              `).join("")}
             </div>
           </div>
-        );
-      };
-      const applyOfflineProgress = (state) => {
-        const current = now();
-        const elapsedMs = current - (state.lastTick || current);
-        if (elapsedMs <= 0) return state;
-        const minutes = elapsedMs / 60000;
-        const statDecay = state.contract && state.contract.endsAt && state.contract.endsAt > state.lastTick
-          ? CONFIG.STAT_DECAY_CONTRACT_PER_MIN
-          : CONFIG.STAT_DECAY_IDLE_PER_MIN;
-        const moraleCap = moraleMax(state.decor);
-        const adjustStat = (value, cap) => {
-          const factor = value >= CONFIG.STAT_DECAY_THRESHOLD ? CONFIG.STAT_DECAY_REDUCTION_FACTOR : 1;
-          const newValue = value + statDecay * minutes * factor;
-          return clamp(newValue, CONFIG.STAT_MIN, cap);
-        };
-        state.stats.energy = adjustStat(state.stats.energy, CONFIG.BASE_STAT_MAX);
-        state.stats.cleanliness = adjustStat(state.stats.cleanliness, CONFIG.BASE_STAT_MAX);
-        state.stats.morale = adjustStat(state.stats.morale, moraleCap);
-
-        let contract = state.contract;
-        if (contract && contract.endsAt <= current) {
-          state.credits += contract.payout;
-          state.lifetime.creditsEarned += contract.payout;
-          state.lifetime.contractsCompleted += 1;
-          state.toast.push({ id: `contract-${contract.id}-${current}`, message: `${contract.label} complete · +${contract.payout} credits` });
-          contract = null;
-        }
-        state.contract = contract;
-
-        const allHealthy = state.stats.energy >= 70 && state.stats.cleanliness >= 70 && state.stats.morale >= 70;
-        if (allHealthy) {
-          state.lifetime.moraleAbove70Minutes += minutes;
-        }
-
-        const onDuty = state.stats.energy >= 60 && state.stats.cleanliness >= 60 && state.stats.morale >= 60;
-        if (onDuty) {
-          const rarityData = CONFIG.RARITIES[state.rarity] || CONFIG.RARITIES.Common;
-          let rate = 2 * rarityData.multiplier; // per minute
-          if (state.stats.energy < 40 || state.stats.cleanliness < 40 || state.stats.morale < 40) {
-            rate *= 0.75;
-          }
-          const earned = rate * minutes;
-          state.credits += earned;
-          state.lifetime.creditsEarned += earned;
-          state.lifetime.dutyMinutes += minutes;
-        }
-        state.lastTick = current;
-        state.milestones = updateMilestones(state);
-        return state;
-      };
-      const updateMilestones = (state) => {
-        return state.milestones.map((entry) => {
-          const definition = CONFIG.MILESTONES.find((m) => m.id === entry.id);
-          if (!definition) return entry;
-          if (entry.achieved) return entry;
-          let achieved = entry.achieved;
-          if (entry.id === "professional-i") {
-            achieved = state.lifetime.moraleAbove70Minutes >= 180;
-          } else if (entry.id === "craftsman") {
-            achieved = state.lifetime.contractsCompleted >= 5 && state.stats.morale >= 50;
-          } else if (entry.id === "steady-hand") {
-            achieved = state.lifetime.creditsEarned >= 10000;
-          }
-          return { ...entry, achieved };
+        `;
+        modal.addEventListener("click", (ev) => {
+          if (ev.target.id === "modal-close" || ev.target === modal) modal.remove();
         });
-      };
-      const App = () => {
-        const [state, setState] = useState(() => applyOfflineProgress(loadState()));
-        const [packResults, setPackResults] = useState(null);
-        const [showWardrobe, setShowWardrobe] = useState(false);
-        const [showSettings, setShowSettings] = useState(false);
-        const [activeMiniGame, setActiveMiniGame] = useState(null);
-        const [dragPreview, setDragPreview] = useState(null);
-        const canvasRef = useRef(null);
-        const roomRef = useRef(null);
-        const busRef = useRef(new EventBus());
-        const stateRef = useRef(state);
-        const packEngineRef = useRef(null);
-        const audioContextRef = useRef(null);
-        const gainRef = useRef(null);
-
-        useEffect(() => {
-          stateRef.current = state;
-          saveState(state);
-          mirrorToFirebase(state);
-        }, [state]);
-
-        useEffect(() => {
-          if (!canvasRef.current) return;
-          roomRef.current = new RoomEngine(canvasRef.current, busRef.current);
-          return () => {
-            if (roomRef.current) roomRef.current.running = false;
-          };
-        }, []);
-
-        useEffect(() => {
-          if (roomRef.current) {
-            roomRef.current.setDecor(state.decor);
-          }
-        }, [state.decor]);
-
-        const equippedForRoom = useMemo(() => {
-          const payload = {};
-          Object.entries(state.accessories.equipped).forEach(([slot, item]) => {
-            if (item) payload[slot] = item;
+        modal.querySelectorAll("button[data-id]").forEach((btn) => {
+          btn.addEventListener("pointerdown", (ev) => {
+            const item = DECOR_LIBRARY.find((d) => d.id === btn.dataset.id);
+            if (!item) return;
+            ev.preventDefault();
+            startDecorDrag({ mode: "new", item });
+            updateDecorGhost(ev.clientX, ev.clientY);
+            modal.remove();
           });
-          return payload;
-        }, [state.accessories.equipped]);
+        });
+        document.getElementById("modal-root").appendChild(modal);
+      }
 
-        useEffect(() => {
-          if (roomRef.current) {
-            roomRef.current.setAccessories(equippedForRoom);
-          }
-        }, [equippedForRoom]);
+      function startDecorDrag(payload) {
+        decorDrag = payload;
+        if (decorGhost) decorGhost.remove();
+        decorGhost = document.createElement("div");
+        decorGhost.className = "decor-item pointer-events-none opacity-70";
+        decorGhost.style.position = "fixed";
+        decorGhost.style.left = "0px";
+        decorGhost.style.top = "0px";
+        decorGhost.style.transform = "translate(-44px, -44px)";
+        decorGhost.textContent = payload.item ? payload.item.name.split(" ")[0] : "Move";
+        document.body.appendChild(decorGhost);
+      }
 
-        useEffect(() => {
-          packEngineRef.current = new PackEngine(stateRef, (newState) => setState({ ...newState }));
-        }, []);
+      function updateDecorGhost(x, y) {
+        if (!decorGhost) return;
+        decorGhost.style.left = `${x}px`;
+        decorGhost.style.top = `${y}px`;
+      }
 
-        const dragItemRef = useRef(null);
-
-        useEffect(() => {
-          const handlePointer = (point) => {
-            setDragPreview((prev) => (prev ? { ...prev, point } : prev));
-          };
-          const handleLeave = () => {
-            setDragPreview((prev) => (prev ? { ...prev, point: null } : prev));
-          };
-          const handleDrop = (tile) => {
-            if (!dragItemRef.current) return;
-            placeDecorAt(tile, dragItemRef.current);
-            dragItemRef.current = null;
-            setDragPreview(null);
-          };
-          const bus = busRef.current;
-          bus.on("room-pointer", handlePointer);
-          bus.on("room-pointer-leave", handleLeave);
-          bus.on("room-pointer-up", handleDrop);
-          return () => {
-            bus.off("room-pointer", handlePointer);
-            bus.off("room-pointer-leave", handleLeave);
-            bus.off("room-pointer-up", handleDrop);
-          };
-        }, []);
-
-        const placeDecorAt = (tile, item) => {
-          setState((prev) => {
-            if (item.isNew && prev.credits < item.value) {
-              return prev;
+      function completeDecorDrag(x, y) {
+        if (!decorDrag) return;
+        const rect = roomGrid.getBoundingClientRect();
+        const inside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        if (inside) {
+          const tileW = rect.width / GRID_CONFIG.cols;
+          const tileH = rect.height / GRID_CONFIG.rows;
+          const gridX = Math.max(0, Math.min(GRID_CONFIG.cols - 1, Math.floor((x - rect.left) / tileW)));
+          const gridY = Math.max(0, Math.min(GRID_CONFIG.rows - 1, Math.floor((y - rect.top) / tileH)));
+          if (decorDrag.mode === "new") {
+            state.room.decor.push({ id: decorDrag.item.id, x: gridX, y: gridY, footprint: { w: 1, h: 1 } });
+            showToast(`${decorDrag.item.name} placed`, "success");
+          } else if (decorDrag.mode === "move" && typeof decorDrag.index === "number") {
+            const target = state.room.decor[decorDrag.index];
+            if (target) {
+              target.x = gridX;
+              target.y = gridY;
+              showToast("Decor repositioned", "info");
             }
-            const existing = prev.decor.filter((decor) => decor.uid !== item.uid);
-            const updated = [
-              ...existing,
-              {
-                uid: item.uid,
-                id: item.id,
-                name: item.name,
-                tint: item.tint,
-                moraleCap: item.moraleCap,
-                value: item.value,
-                col: tile.col,
-                row: tile.row,
-              },
-            ];
-            return {
-              ...prev,
-              credits: item.isNew ? prev.credits - item.value : prev.credits,
-              decor: updated,
-            };
-          });
-        };
-
-        const beginDecorDrag = (item) => {
-          dragItemRef.current = item;
-          setDragPreview({ ...item, point: null });
-        };
-
-        const moveDecor = (item) => {
-          dragItemRef.current = { ...item, isNew: false };
-          setDragPreview({ ...item, point: null });
-          setState((prev) => ({ ...prev, decor: prev.decor.filter((decor) => decor.uid !== item.uid) }));
-        };
-
-        const sellDecor = (item) => {
-          setState((prev) => {
-            const updated = prev.decor.filter((decor) => decor.uid !== item.uid);
-            return { ...prev, decor: updated, credits: prev.credits + Math.floor(item.value * 0.6) };
-          });
-        };
-
-        const handleQuickCare = () => {
-          setState((prev) => {
-            if (prev.credits < CONFIG.QUICK_CARE_COST) return prev;
-            const moraleCap = moraleMax(prev.decor);
-            return {
-              ...prev,
-              credits: prev.credits - CONFIG.QUICK_CARE_COST,
-              stats: {
-                energy: clamp(prev.stats.energy + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
-                cleanliness: clamp(prev.stats.cleanliness + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
-                morale: clamp(prev.stats.morale + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, moraleCap),
-              },
-            };
-          });
-        };
-
-        const handleContractStart = (job) => {
-          setState((prev) => {
-            if (prev.contract) return prev;
-            const moraleCap = moraleMax(prev.decor);
-            return {
-              ...prev,
-              contract: {
-                ...job,
-                startedAt: now(),
-                endsAt: now() + job.durationMinutes * 60000,
-              },
-              stats: {
-                ...prev.stats,
-                energy: clamp(prev.stats.energy - job.energyCost, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
-              },
-            };
-          });
-        };
-
-        const handleContractCancel = () => {
-          setState((prev) => ({ ...prev, contract: null }));
-        };
-
-        const handlePackOpen = (key) => {
-          const engine = packEngineRef.current;
-          if (!engine) return;
-          const results = engine.openPack(key);
-          if (results.length) {
-            setPackResults(results);
           }
-        };
+          queueSave();
+          render();
+        }
+        if (decorGhost) {
+          decorGhost.remove();
+          decorGhost = null;
+        }
+        decorDrag = null;
+      }
 
-        const handleEquip = (slot, item) => {
-          setState((prev) => ({
-            ...prev,
-            accessories: {
-              ...prev.accessories,
-              equipped: { ...prev.accessories.equipped, [slot]: item },
-            },
-          }));
-        };
-
-        const handleMilestoneClaim = (definition) => {
-          setState((prev) => {
-            const milestones = prev.milestones.map((entry) =>
-              entry.id === definition.id ? { ...entry, claimed: true } : entry
-            );
-            const updates = { ...prev, milestones };
-            if (definition.reward.credits) {
-              updates.credits += definition.reward.credits;
-            } else if (definition.reward.pack) {
-              const packKey = definition.reward.pack;
-              updates.packs = { ...prev.packs, [packKey]: (prev.packs[packKey] || 0) + 1 };
-            }
-            return updates;
-          });
-        };
-
-        const dismissToast = (id) => {
-          setState((prev) => ({ ...prev, toast: prev.toast.filter((toast) => toast.id !== id) }));
-        };
-
-        useEffect(() => {
-          if (!state.toast.length) return;
-          const timer = setTimeout(() => {
-            setState((prev) => ({ ...prev, toast: prev.toast.slice(1) }));
-          }, 4800);
-          return () => clearTimeout(timer);
-        }, [state.toast]);
-
-        useEffect(() => {
-          const timer = setInterval(() => {
-            setState((prev) => {
-              const moraleCap = moraleMax(prev.decor);
-              const baseDecay = prev.contract ? CONFIG.STAT_DECAY_CONTRACT_PER_MIN : CONFIG.STAT_DECAY_IDLE_PER_MIN;
-              const decayStep = baseDecay / 60; // per minute to per second
-              const applyDecay = (value, cap) => {
-                const factor = value >= CONFIG.STAT_DECAY_THRESHOLD ? CONFIG.STAT_DECAY_REDUCTION_FACTOR : 1;
-                return clamp(value + decayStep * factor, CONFIG.STAT_MIN, cap);
-              };
-              const stats = {
-                energy: applyDecay(prev.stats.energy, CONFIG.BASE_STAT_MAX),
-                cleanliness: applyDecay(prev.stats.cleanliness, CONFIG.BASE_STAT_MAX),
-                morale: applyDecay(prev.stats.morale, moraleCap),
-              };
-              const rarityData = CONFIG.RARITIES[prev.rarity] || CONFIG.RARITIES.Common;
-              let credits = prev.credits;
-              let dutyMinutes = prev.lifetime.dutyMinutes;
-              let creditsEarned = prev.lifetime.creditsEarned;
-              if (stats.energy >= 60 && stats.cleanliness >= 60 && stats.morale >= 60) {
-                let perMinute = 2 * rarityData.multiplier;
-                if (stats.energy < 40 || stats.cleanliness < 40 || stats.morale < 40) perMinute *= 0.75;
-                const perSecond = perMinute / 60;
-                credits += perSecond;
-                creditsEarned += perSecond;
-                dutyMinutes += 1 / 60;
-              }
-              const lifetime = {
-                ...prev.lifetime,
-                creditsEarned,
-                dutyMinutes,
-                moraleAbove70Minutes:
-                  stats.energy >= 70 && stats.cleanliness >= 70 && stats.morale >= 70
-                    ? prev.lifetime.moraleAbove70Minutes + 1 / 60
-                    : prev.lifetime.moraleAbove70Minutes,
-                contractsCompleted: prev.lifetime.contractsCompleted,
-              };
-              const contract = prev.contract && prev.contract.endsAt <= now() ? null : prev.contract;
-              const toast = [...prev.toast];
-              if (prev.contract && prev.contract.endsAt <= now()) {
-                credits += prev.contract.payout;
-                creditsEarned += prev.contract.payout;
-                lifetime.creditsEarned = creditsEarned;
-                lifetime.contractsCompleted = prev.lifetime.contractsCompleted + 1;
-                toast.push({ id: `contract-${prev.contract.id}-${now()}`, message: `${prev.contract.label} complete · +${prev.contract.payout} credits` });
-              }
-              const milestones = updateMilestones({ ...prev, stats, lifetime });
-              return { ...prev, stats, credits, lifetime, contract, toast, milestones, lastTick: now() };
-            });
-          }, 1000);
-          return () => clearInterval(timer);
-        }, []);
-
-        useEffect(() => {
-          if (state.settings.volume <= 0) return;
-          if (!audioContextRef.current) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const context = new AudioContext();
-            const gain = context.createGain();
-            const oscillator = context.createOscillator();
-            oscillator.type = "sine";
-            oscillator.frequency.value = 92;
-            const lfo = context.createOscillator();
-            lfo.type = "sine";
-            lfo.frequency.value = 0.1;
-            const lfoGain = context.createGain();
-            lfoGain.gain.value = 30;
-            lfo.connect(lfoGain).connect(oscillator.frequency);
-            gain.gain.value = state.settings.volume * 0.08;
-            oscillator.connect(gain).connect(context.destination);
-            oscillator.start();
-            lfo.start();
-            audioContextRef.current = context;
-            gainRef.current = gain;
-            const resume = () => {
-              if (context.state === "suspended") context.resume();
-            };
-            window.addEventListener("pointerdown", resume, { once: true });
-          } else if (gainRef.current) {
-            gainRef.current.gain.value = state.settings.volume * 0.08;
-          }
-        }, [state.settings.volume]);
-
-        const handleMiniGameLaunch = (game) => {
-          if (game.disabled) return;
-          const usage = state.miniGameUsage[game.id] || { history: [] };
-          const recent = usage.history || [];
-          const perHour = recent.filter((stamp) => now() - stamp < 3600000).length;
-          const perDay = recent.filter((stamp) => now() - stamp < 86400000).length;
-          if (perHour >= CONFIG.MINI_GAME_LIMITS.perHour || perDay >= CONFIG.MINI_GAME_LIMITS.perDay) {
-            setState((prev) => ({
-              ...prev,
-              toast: [
-                ...prev.toast,
-                {
-                  id: `gig-limit-${game.id}-${now()}`,
-                  message: `${game.name} · rest before the next attempt`,
-                },
-              ],
-            }));
+      function showDecorMenu(index, x, y) {
+        if (decorMenu) decorMenu.remove();
+        decorMenu = document.createElement("div");
+        decorMenu.className = "glass-panel fixed z-50 rounded-2xl px-4 py-3 text-sm text-slate-200";
+        decorMenu.style.left = `${x}px`;
+        decorMenu.style.top = `${y}px`;
+        decorMenu.innerHTML = `
+          <div class="flex flex-col gap-2">
+            <button class="move-option text-left text-xs uppercase tracking-wide text-emerald-200">Move</button>
+            <button class="sell-option text-left text-xs uppercase tracking-wide text-amber-200">Sell (+60 credits)</button>
+          </div>
+        `;
+        const closeMenu = (ev) => {
+          if (!decorMenu) {
+            document.removeEventListener("pointerdown", closeMenu);
             return;
           }
-          setActiveMiniGame(game);
+          if (!decorMenu.contains(ev.target)) {
+            decorMenu.remove();
+            decorMenu = null;
+            document.removeEventListener("pointerdown", closeMenu);
+          }
         };
+        decorMenu.querySelector(".move-option").addEventListener("click", () => {
+          const item = state.room.decor[index];
+          if (!item) return;
+          const catalog = DECOR_LIBRARY.find((d) => d.id === item.id);
+          startDecorDrag({ mode: "move", index, item: catalog });
+          if (decorMenu) decorMenu.remove();
+          decorMenu = null;
+          document.removeEventListener("pointerdown", closeMenu);
+        });
+        decorMenu.querySelector(".sell-option").addEventListener("click", () => {
+          const [removed] = state.room.decor.splice(index, 1);
+          if (removed) {
+            state.credits += 60;
+            showToast("Decor sold", "success");
+            queueSave();
+            render();
+          }
+          if (decorMenu) decorMenu.remove();
+          decorMenu = null;
+          document.removeEventListener("pointerdown", closeMenu);
+        });
+        document.body.appendChild(decorMenu);
+        document.addEventListener("pointerdown", closeMenu);
+      }
 
-        const handleMiniGameComplete = ({ reward, score }) => {
-          const completedGame = activeMiniGame;
-          setActiveMiniGame(null);
-          setState((prev) => {
-            if (!completedGame) return prev;
-            const usage = { ...prev.miniGameUsage };
-            const history = usage[completedGame.id]?.history || [];
-            const updatedHistory = [...history.filter((stamp) => now() - stamp < 86400000), now()];
-            usage[completedGame.id] = { history: updatedHistory };
-            const toast = [...prev.toast, { id: `gig-${completedGame.id}-${now()}`, message: `${completedGame.name} · ${Math.round(score)} pts · +${reward} credits` }];
-            return {
-              ...prev,
-              credits: prev.credits + reward,
-              lifetime: { ...prev.lifetime, creditsEarned: prev.lifetime.creditsEarned + reward },
-              miniGameUsage: usage,
-              toast,
-            };
-          });
+      function createBearSprite() {
+        const el = document.createElement("div");
+        el.className = "bear-sprite";
+        el.dataset.facing = "right";
+        return el;
+      }
+
+      function spawnFloatingText(text, gridPos) {
+        const floating = document.createElement("div");
+        floating.className = "floating-text text-sm font-semibold text-emerald-200";
+        floating.textContent = text;
+        const rect = document.getElementById("room-grid").getBoundingClientRect();
+        floating.style.left = `${rect.left + (gridPos.x / GRID_CONFIG.cols) * rect.width}px`;
+        floating.style.top = `${rect.top + (gridPos.y / GRID_CONFIG.rows) * rect.height}px`;
+        document.body.appendChild(floating);
+        setTimeout(() => floating.remove(), 800);
+      }
+
+      function showToast(message, tone = "info") {
+        const root = document.getElementById("toast-root");
+        const toast = document.createElement("div");
+        const toneClass = {
+          info: "bg-slate-800/90 text-slate-200",
+          success: "bg-emerald-600/30 text-emerald-100",
+          warn: "bg-amber-500/20 text-amber-100",
+        }[tone] || "bg-slate-800/90 text-slate-200";
+        toast.className = `glass-panel toast-enter rounded-full px-4 py-2 text-sm ${toneClass}`;
+        toast.textContent = message;
+        root.appendChild(toast);
+        setTimeout(() => toast.remove(), 3200);
+      }
+
+      function queueSave() {
+        saveQueued = true;
+      }
+
+      function writeSave() {
+        state.meta.lastSaved = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (firebaseMirror) {
+          firebaseMirror.save(state);
+        }
+      }
+
+      function mainLoop(timestamp) {
+        const delta = timestamp - lastFrame;
+        lastFrame = timestamp;
+        realtimeAccumulator += delta;
+        roomEngine.update(delta);
+        bearAnimator.update(delta);
+        if (realtimeAccumulator >= 60000) {
+          const minutes = Math.floor(realtimeAccumulator / 60000);
+          realtimeAccumulator -= minutes * 60000;
+          applyRealtimeDecay(minutes);
+        }
+        if (saveQueued) {
+          saveQueued = false;
+          writeSave();
+        }
+        requestAnimationFrame(mainLoop);
+      }
+
+      function applyRealtimeDecay(minutes) {
+        const stats = state.bear.stats;
+        const contractActive = state.bear.job && state.bear.job.id && Date.now() < state.bear.job.contractEndsAt;
+        const rate = contractActive ? 1 / 5 : 1 / 10;
+        const decay = minutes * rate;
+        stats.energy = clamp(stats.energy - decay, 0, statMax("energy"));
+        stats.cleanliness = clamp(stats.cleanliness - decay, 0, statMax("cleanliness"));
+        stats.morale = clamp(stats.morale - decay, 0, statMax("morale"));
+        state.bear.ageMinutes += minutes;
+        updateBearStage(state);
+        trackSteadyProgress(state, minutes);
+        if (contractActive && Date.now() >= state.bear.job.contractEndsAt) {
+          state.credits += state.bear.job.payout;
+          state.stats.contractsCompleted = (state.stats.contractsCompleted || 0) + 1;
+          showToast(`Contract complete · +${state.bear.job.payout} credits`, "success");
+          state.bear.job = { id: null, contractEndsAt: 0, payout: 0, startedAt: 0 };
+        }
+        if (isOnDuty(state)) {
+          state.credits += incomePerMinute(state) * minutes;
+        }
+        render();
+      }
+
+      function updateBearStage(state) {
+        const minutes = state.bear.ageMinutes;
+        if (minutes < 60) state.bear.stage = "cub";
+        else if (minutes < 180) state.bear.stage = "teen";
+        else state.bear.stage = "adult";
+      }
+
+      function trackSteadyProgress(state, minutes) {
+        const stats = state.bear.stats;
+        if (stats.energy >= 70 && stats.cleanliness >= 70 && stats.morale >= 70) {
+          state.stats.steadyMinutes = (state.stats.steadyMinutes || 0) + minutes;
+        }
+      }
+
+      function isOnDuty(state) {
+        return state.bear.stats.energy >= 60 && state.bear.stats.cleanliness >= 60 && state.bear.stats.morale >= 60;
+      }
+
+      function isAdult(state) {
+        return state.bear.stage === "adult";
+      }
+
+      function statMax(key) {
+        let max = 100;
+        state.room.decor.forEach((decor) => {
+          const item = DECOR_LIBRARY.find((d) => d.id === decor.id);
+          if (item && item.boosts) {
+            if (key === "morale" && item.boosts.moraleCap) max += item.boosts.moraleCap;
+            if (key === "energy" && item.boosts.energyCap) max += item.boosts.energyCap;
+            if (key === "cleanliness" && item.boosts.cleanCap) max += item.boosts.cleanCap;
+          }
+        });
+        if (key === "morale" && state.accessories.equipped.neck === "band") max += 2;
+        if (key === "morale" && state.accessories.equipped.head === "fedora") max += 2;
+        return Math.round(max);
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function formatRelative(timestamp) {
+        const diff = timestamp - Date.now();
+        if (diff <= 0) return "completed";
+        const minutes = Math.round(diff / 60000);
+        if (minutes < 60) return `${minutes} min`; 
+        const hours = Math.round(minutes / 60);
+        return `${hours} h`;
+      }
+
+      function applyRealtimeFirebase(state) {}
+
+      async function initFirebase(config) {
+        const appScript = document.createElement("script");
+        appScript.src = `https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js?v=${BUILD_VERSION}`;
+        const firestoreScript = document.createElement("script");
+        firestoreScript.src = `https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js?v=${BUILD_VERSION}`;
+        document.head.appendChild(appScript);
+        await new Promise((resolve) => (appScript.onload = resolve));
+        document.head.appendChild(firestoreScript);
+        await new Promise((resolve) => (firestoreScript.onload = resolve));
+        const app = firebase.initializeApp(config);
+        const db = firebase.firestore(app);
+        firebaseMirror = {
+          save(payload) {
+            if (!state.meta.homeCode) return;
+            db.collection("teamBearHomes").doc(state.meta.homeCode).set(payload, { merge: true }).catch((err) => console.warn(err));
+          },
         };
-
-        const toggleVerse = (value) => {
-          setState((prev) => ({
-            ...prev,
-            settings: { ...prev.settings, showKJV: value },
-            verseIndex: value ? (prev.verseIndex + 1) % CONFIG.KJV_VERSES.length : prev.verseIndex,
-          }));
-        };
-
-        const handleVolume = (value) => {
-          setState((prev) => ({ ...prev, settings: { ...prev.settings, volume: value } }));
-        };
-
-        const verse = CONFIG.KJV_VERSES[state.verseIndex % CONFIG.KJV_VERSES.length];
-
-        const activeContract = state.contract;
-
-        return (
-          <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10">
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-semibold text-slate-100">Team Bear · Studio Loop</h1>
-                <p className="text-sm text-slate-400">Maintain a composed bear, manage credits, and unlock composed milestones.</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowWardrobe(true)}
-                  className="rounded-full border border-slate-600/40 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 hover:border-slate-400"
-                >
-                  Wardrobe
-                </button>
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="rounded-full border border-slate-600/40 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 hover:border-slate-400"
-                >
-                  Settings
-                </button>
-              </div>
-            </header>
-
-            <main className="grid grid-cols-1 gap-8 lg:grid-cols-[2fr,1fr]">
-              <div className="glass relative rounded-3xl p-6">
-                <div className="overflow-hidden rounded-3xl border border-slate-600/30 bg-slate-950/60 p-4">
-                  <div className="mx-auto w-[768px] max-w-full">
-                    <div className="relative" style={{ padding: `${CONFIG.ROOM_PADDING}px` }}>
-                      <canvas ref={canvasRef} className="room-grid-shadow w-full" style={{ aspectRatio: `${CONFIG.GRID.COLS} / ${CONFIG.GRID.ROWS}` }}></canvas>
-                      <DecorOverlay decor={state.decor} onMove={moveDecor} onSell={sellDecor} />
-                      {dragPreview && dragPreview.point && (
-                        <div
-                          className="pointer-events-none absolute h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/60 bg-emerald-400/20"
-                          style={{ left: dragPreview.point.x, top: dragPreview.point.y }}
-                        ></div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <VerseDisplay show={state.settings.showKJV} verse={verse} />
-              </div>
-              <div className="space-y-6">
-                <StatsPanel stats={state.stats} decor={state.decor} onQuickCare={handleQuickCare} canAfford={state.credits >= CONFIG.QUICK_CARE_COST} />
-                <CurrencyPanel credits={state.credits} vouchers={state.vouchers} />
-                <ContractPanel contract={activeContract} onStart={handleContractStart} onCancel={handleContractCancel} />
-              </div>
-            </main>
-
-            <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-              <DecorCatalog onBeginDrag={beginDecorDrag} />
-              <SideGigsPanel usage={state.miniGameUsage} onLaunch={handleMiniGameLaunch} />
-              <MilestonesPanel milestones={state.milestones} definitions={CONFIG.MILESTONES} onClaim={handleMilestoneClaim} />
-            </section>
-
-            <section className="glass rounded-3xl p-6">
-              <h2 className="text-lg font-semibold text-slate-100">Packs</h2>
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                {Object.entries(CONFIG.PACK_TYPES).map(([key, pack]) => (
-                  <PackButton key={key} pack={pack} onOpen={() => handlePackOpen(key)} />
-                ))}
-              </div>
-            </section>
-
-            {packResults && <PackReveal results={packResults} onClose={() => setPackResults(null)} />}
-            {showWardrobe && (
-              <WardrobeModal
-                inventory={state.accessories.inventory}
-                equipped={state.accessories.equipped}
-                onClose={() => setShowWardrobe(false)}
-                onEquip={handleEquip}
-              />
-            )}
-            {showSettings && (
-              <SettingsModal
-                settings={state.settings}
-                onToggleVerse={toggleVerse}
-                onVolumeChange={handleVolume}
-                onClose={() => setShowSettings(false)}
-              />
-            )}
-            {activeMiniGame && (
-              <MiniGameModal
-                game={activeMiniGame}
-                onComplete={handleMiniGameComplete}
-                onClose={() => setActiveMiniGame(null)}
-              />
-            )}
-            <ToastStack toasts={state.toast} onDismiss={dismissToast} />
-          </div>
-        );
-      };
-
-      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      }
     </script>
   </body>
 </html>
