@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Team Bear · Gabe &amp; Savannah</title>
+    <!-- Tailwind CSS CDN for quick styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Simple bear animation using keyframes */
+      @keyframes gentle-bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+
+      .bear-animate-happy {
+        animation: gentle-bounce 2s infinite;
+      }
+
+      .bear-animate-tired {
+        animation: gentle-bounce 4s infinite;
+        opacity: 0.8;
+      }
+
+      .bear-animate-sick {
+        animation: none;
+        filter: grayscale(0.5);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100 text-slate-800">
+    <div class="max-w-5xl mx-auto py-12 px-6 space-y-10">
+      <header class="text-center space-y-3">
+        <h1 class="text-4xl md:text-5xl font-black text-rose-500 drop-shadow-sm">
+          Gabe &amp; Savannah's Team Bear 🐻
+        </h1>
+        <p class="text-lg max-w-2xl mx-auto text-slate-600">
+          Gabe and Savannah, welcome back to your cozy den! Team up to care for
+          your shared bear, keep an eye on every need, and celebrate each win
+          together.
+        </p>
+        <div class="grid gap-4 sm:grid-cols-2 text-left">
+          <div class="bg-white/70 rounded-3xl shadow px-5 py-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-rose-200 flex items-center justify-center text-xl">
+              G
+            </div>
+            <div>
+              <p class="text-base font-semibold">Gabe</p>
+              <p class="text-sm text-slate-500">Chief snack distributor &amp; bear DJ.</p>
+            </div>
+          </div>
+          <div class="bg-white/70 rounded-3xl shadow px-5 py-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center text-xl">
+              S
+            </div>
+            <div>
+              <p class="text-base font-semibold">Savannah</p>
+              <p class="text-sm text-slate-500">Cozy den decorator &amp; cuddle chief.</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Bear Display Card -->
+      <section
+        class="bg-white/80 backdrop-blur rounded-3xl shadow-xl px-6 py-10 grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-8"
+      >
+        <div class="flex flex-col items-center text-center space-y-4">
+          <div
+            id="bearAvatar"
+            class="w-60 h-60 rounded-full bg-gradient-to-br from-amber-200 via-amber-300 to-amber-100 flex flex-col items-center justify-center text-7xl shadow-inner border-4 border-white"
+          >
+            🐻
+          </div>
+          <div>
+            <p class="text-2xl font-semibold" id="bearName">Sunny the Cub</p>
+            <p class="text-sm text-slate-500" id="bearMood">Mood: Happy</p>
+            <p class="text-sm text-slate-500" id="bearStage">Stage: Cub</p>
+            <p class="text-sm text-slate-500" id="bearAge">Days Together: 0</p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-xl font-semibold">Bear Health</h2>
+              <span
+                id="bearStatus"
+                class="text-sm font-medium px-2 py-1 rounded-full bg-emerald-100 text-emerald-700"
+                >Healthy</span
+              >
+            </div>
+            <div class="space-y-3" id="statsContainer"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              id="feedBtn"
+              class="rounded-2xl px-4 py-3 bg-emerald-400 hover:bg-emerald-500 text-white font-semibold shadow-md transition"
+            >
+              Feed 🍯
+            </button>
+            <button
+              id="cleanBtn"
+              class="rounded-2xl px-4 py-3 bg-sky-400 hover:bg-sky-500 text-white font-semibold shadow-md transition"
+            >
+              Clean 🫧
+            </button>
+            <button
+              id="playBtn"
+              class="rounded-2xl px-4 py-3 bg-rose-400 hover:bg-rose-500 text-white font-semibold shadow-md transition"
+            >
+              Play 🎈
+            </button>
+            <button
+              id="sleepBtn"
+              class="rounded-2xl px-4 py-3 bg-indigo-400 hover:bg-indigo-500 text-white font-semibold shadow-md transition"
+            >
+              Sleep 🌙
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coin & shop section -->
+      <section class="grid md:grid-cols-3 gap-8">
+        <div class="md:col-span-1 bg-white/80 backdrop-blur rounded-3xl shadow-xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Shared Wallet</h2>
+            <span id="coinCount" class="text-lg font-bold text-amber-500">0 🪙</span>
+          </div>
+          <p class="text-sm text-slate-500">
+            Your bear brings in coins when all stats stay above zero. Work together
+            to keep them healthy so they can contribute to the den fund!
+          </p>
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-sm">
+            <p class="font-semibold">Bear Earnings</p>
+            <p id="nextPayout">Next paycheck in: 3:00</p>
+          </div>
+          <div class="bg-white/70 border border-slate-200 rounded-2xl p-3 text-sm">
+            <p class="font-semibold">Pantry</p>
+            <p id="pantryCount">Honey jars: 0</p>
+          </div>
+        </div>
+
+        <div class="md:col-span-2 bg-white/80 backdrop-blur rounded-3xl shadow-xl p-6">
+          <h2 class="text-xl font-semibold mb-4">Den Boutique</h2>
+          <div class="grid md:grid-cols-2 gap-4" id="shopItems"></div>
+        </div>
+      </section>
+
+      <!-- Activity log -->
+      <section class="bg-white/70 backdrop-blur rounded-3xl shadow-xl p-6 space-y-3">
+        <h2 class="text-xl font-semibold">Activity Log</h2>
+        <ul id="activityLog" class="space-y-2 text-sm text-slate-600 max-h-48 overflow-y-auto">
+          <li class="text-slate-400">Gabe &amp; Savannah, welcome to your shared den!</li>
+        </ul>
+      </section>
+    </div>
+
+    <script>
+      // -- Game Constants ----------------------------------------------------
+      const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+      const CARETAKERS = ["Gabe", "Savannah"];
+
+      const DEFAULT_STATE = {
+        bear: {
+          name: "Sunny the Cub",
+          hunger: 100,
+          energy: 100,
+          cleanliness: 100,
+          happiness: 100,
+          stage: "Cub",
+          ageSeconds: 0,
+          activeBearId: "golden",
+          decorations: "sunrise",
+        },
+        coins: 0,
+        lastUpdate: Date.now(),
+        lastPaycheck: Date.now(),
+        inventory: {
+          bears: ["golden"],
+          decorations: ["sunrise"],
+          food: 0,
+        },
+        log: ["Gabe & Savannah opened their shared den."],
+        caretakerTurn: 0,
+      };
+
+      // Rates define how quickly stats change in real time per minute.
+      const DECAY_PER_MINUTE = {
+        hunger: 5,
+        energy: 3,
+        cleanliness: 4,
+        happiness: 3,
+      };
+
+      const ACTION_EFFECTS = {
+        feed: { hunger: 22, happiness: 4 },
+        clean: { cleanliness: 25, happiness: 6 },
+        play: { happiness: 18, energy: -8, cleanliness: -4 },
+        sleep: { energy: 28, hunger: -6 },
+      };
+
+      const SHOP_ITEMS = [
+        {
+          id: "cozy-snack",
+          type: "food",
+          label: "Jar of Honey",
+          description: "+35 Hunger (consumable)",
+          cost: 20,
+          apply: (state) => {
+            state.inventory.food += 1;
+          },
+        },
+        {
+          id: "bubble-bath",
+          type: "boost",
+          label: "Bubble Bath Day",
+          description: "Instantly +30 Cleanliness",
+          cost: 35,
+          apply: (state) => {
+            state.bear.cleanliness = Math.min(100, state.bear.cleanliness + 30);
+          },
+        },
+        {
+          id: "new-bear",
+          type: "bear",
+          label: "Adopt a Cocoa Bear",
+          description: "Adds a new bear style",
+          cost: 120,
+          apply: (state) => {
+            if (!state.inventory.bears.includes("cocoa")) {
+              state.inventory.bears.push("cocoa");
+            }
+            state.bear.activeBearId = "cocoa";
+          },
+        },
+        {
+          id: "aurora-decor",
+          type: "decor",
+          label: "Aurora Lights",
+          description: "Glowing teal & violet den backdrop",
+          cost: 90,
+          apply: (state) => {
+            if (!state.inventory.decorations.includes("aurora")) {
+              state.inventory.decorations.push("aurora");
+            }
+            state.bear.decorations = "aurora";
+          },
+        },
+      ];
+
+      const BEAR_STYLES = {
+        golden: {
+          gradient: "from-amber-200 via-amber-300 to-amber-100",
+          emoji: "🐻",
+          name: "Sunny",
+        },
+        cocoa: {
+          gradient: "from-stone-300 via-amber-300 to-stone-200",
+          emoji: "🐻‍❄️",
+          name: "Cocoa",
+        },
+      };
+
+      const DECORATION_STYLES = {
+        sunrise: {
+          gradient: "from-rose-100 via-amber-100 to-sky-100",
+          text: "text-slate-800",
+        },
+        aurora: {
+          gradient: "from-slate-900 via-emerald-800 to-sky-900",
+          text: "text-slate-100",
+        },
+      };
+
+      const PAY_INTERVAL = 3 * 60 * 1000; // 3 minutes
+      const PAY_AMOUNT = 25;
+
+      function getBearNickname() {
+        const style = BEAR_STYLES[state.bear.activeBearId] || BEAR_STYLES.golden;
+        return style.name;
+      }
+
+      // -- State Handling ----------------------------------------------------
+      let state = loadState();
+
+      function loadState() {
+        const saved = localStorage.getItem("team-bear-save");
+        const defaults = deepClone(DEFAULT_STATE);
+        if (!saved) return defaults;
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            ...defaults,
+            ...parsed,
+            bear: { ...defaults.bear, ...(parsed.bear || {}) },
+            inventory: { ...defaults.inventory, ...(parsed.inventory || {}) },
+            log: parsed.log || defaults.log,
+            caretakerTurn: parsed.caretakerTurn ?? defaults.caretakerTurn,
+          };
+        } catch (error) {
+          console.error("Failed to parse save, using defaults", error);
+          return defaults;
+        }
+      }
+
+      function saveState() {
+        state.lastUpdate = Date.now();
+        localStorage.setItem("team-bear-save", JSON.stringify(state));
+      }
+
+      function logActivity(entry) {
+        state.log.unshift(`${new Date().toLocaleTimeString()} · ${entry}`);
+        state.log = state.log.slice(0, 40);
+        renderLog();
+      }
+
+      function renderLog() {
+        const logList = document.getElementById("activityLog");
+        logList.innerHTML = state.log
+          .map((entry) => `<li class="bg-white/70 rounded-2xl px-3 py-2 shadow-sm">${entry}</li>`)
+          .join("");
+      }
+
+      // -- Time Based Updates ------------------------------------------------
+      function applyTimeDecay() {
+        const now = Date.now();
+        const elapsed = now - state.lastUpdate;
+        if (elapsed <= 0) return;
+
+        const minutes = elapsed / 60000;
+        const seconds = elapsed / 1000;
+
+        // Reduce each stat based on elapsed time.
+        for (const key of Object.keys(DECAY_PER_MINUTE)) {
+          const decay = DECAY_PER_MINUTE[key] * minutes;
+          state.bear[key] = clampStat(state.bear[key] - decay);
+        }
+
+        // Grow the bear over time.
+        state.bear.ageSeconds += seconds;
+        updateBearStage();
+
+        state.lastUpdate = now;
+      }
+
+      function updateBearStage() {
+        const days = state.bear.ageSeconds / 86400;
+        if (days >= 6) {
+          state.bear.stage = "Adult";
+        } else if (days >= 2) {
+          state.bear.stage = "Teen";
+        } else {
+          state.bear.stage = "Cub";
+        }
+      }
+
+      function clampStat(value) {
+        if (Number.isNaN(value)) return 0;
+        return Math.max(0, Math.min(100, value));
+      }
+
+      function checkPayday() {
+        const now = Date.now();
+        const healthy = Object.keys(DECAY_PER_MINUTE).every(
+          (statName) => state.bear[statName] > 0
+        );
+        const elapsed = now - state.lastPaycheck;
+
+        if (elapsed >= PAY_INTERVAL) {
+          if (healthy) {
+            const bearName = getBearNickname();
+            state.coins += PAY_AMOUNT;
+            logActivity(`${bearName} clocked in for Gabe & Savannah and earned ${PAY_AMOUNT} coins.`);
+          } else {
+            const bearName = getBearNickname();
+            logActivity(`${bearName} had to call in sick, so Gabe & Savannah missed this shift.`);
+          }
+          state.lastPaycheck = now;
+        }
+
+        // Update countdown text.
+        const remaining = Math.max(0, PAY_INTERVAL - (now - state.lastPaycheck));
+        const minutes = String(Math.floor(remaining / 60000)).padStart(1, "0");
+        const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+        document.getElementById("nextPayout").textContent = `Next paycheck in: ${minutes}:${seconds}`;
+      }
+
+      // -- UI Rendering ------------------------------------------------------
+      function renderStats() {
+        const container = document.getElementById("statsContainer");
+        const stats = [
+          { key: "hunger", label: "Hunger" },
+          { key: "energy", label: "Energy" },
+          { key: "cleanliness", label: "Cleanliness" },
+          { key: "happiness", label: "Happiness" },
+        ];
+
+        container.innerHTML = stats
+          .map(({ key, label }) => {
+            const value = Math.round(state.bear[key]);
+            const barColor = value > 60 ? "bg-emerald-400" : value > 30 ? "bg-amber-400" : "bg-rose-400";
+            return `
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-medium">${label}</span>
+                  <span class="text-sm">${value}</span>
+                </div>
+                <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div class="h-full ${barColor}" style="width: ${value}%"></div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderBearCard() {
+        const bearStyle = BEAR_STYLES[state.bear.activeBearId] || BEAR_STYLES.golden;
+        const bearAvatar = document.getElementById("bearAvatar");
+        const mood = calculateMood();
+
+        bearAvatar.className = `w-60 h-60 rounded-full bg-gradient-to-br ${bearStyle.gradient} flex flex-col items-center justify-center text-7xl shadow-inner border-4 border-white ${mood.animation}`;
+        bearAvatar.textContent = bearStyle.emoji;
+
+        const decor = DECORATION_STYLES[state.bear.decorations] || DECORATION_STYLES.sunrise;
+        document.body.className = `min-h-screen bg-gradient-to-br ${decor.gradient} ${decor.text}`;
+
+        document.getElementById("bearName").textContent = `${bearStyle.name} the ${state.bear.stage}`;
+        document.getElementById("bearMood").textContent = `Mood: ${mood.label}`;
+        document.getElementById("bearStage").textContent = `Stage: ${state.bear.stage}`;
+        document.getElementById("bearAge").textContent = `Days Together: ${Math.floor(state.bear.ageSeconds / 86400)}`;
+
+        const statusBadge = document.getElementById("bearStatus");
+        if (mood.isSick) {
+          statusBadge.textContent = "Sick";
+          statusBadge.className = "text-sm font-medium px-2 py-1 rounded-full bg-rose-100 text-rose-600";
+        } else {
+          statusBadge.textContent = "Healthy";
+          statusBadge.className = "text-sm font-medium px-2 py-1 rounded-full bg-emerald-100 text-emerald-700";
+        }
+      }
+
+      function renderCoins() {
+        document.getElementById("coinCount").textContent = `${state.coins} 🪙`;
+        document.getElementById("pantryCount").textContent = `Honey jars: ${state.inventory.food}`;
+      }
+
+      function renderShop() {
+        const shop = document.getElementById("shopItems");
+        shop.innerHTML = SHOP_ITEMS.map((item) => {
+          const affordable = state.coins >= item.cost;
+          return `
+            <div class="rounded-3xl border border-slate-200 bg-white/70 p-4 flex flex-col gap-3 shadow-sm">
+              <div>
+                <p class="text-lg font-semibold">${item.label}</p>
+                <p class="text-sm text-slate-500">${item.description}</p>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-amber-500 font-semibold">${item.cost} 🪙</span>
+                <button
+                  data-item="${item.id}"
+                  class="buy-btn rounded-2xl px-3 py-2 text-sm font-semibold ${affordable ? "bg-rose-400 hover:bg-rose-500 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}"
+                  ${affordable ? "" : "disabled"}
+                >
+                  Purchase
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        shop.querySelectorAll(".buy-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const item = SHOP_ITEMS.find((shopItem) => shopItem.id === button.dataset.item);
+            if (!item) return;
+            if (state.coins < item.cost) return;
+
+            state.coins -= item.cost;
+            item.apply(state);
+            const buyer = getNextCaretaker();
+            const purchaseMessage = PURCHASE_MESSAGES[item.type]
+              ? PURCHASE_MESSAGES[item.type](buyer, item)
+              : `${buyer} picked up ${item.label}.`;
+            logActivity(purchaseMessage);
+            saveState();
+            renderAll();
+          });
+        });
+      }
+
+      // Determine mood based on stats.
+      function calculateMood() {
+        const values = [state.bear.hunger, state.bear.energy, state.bear.cleanliness, state.bear.happiness];
+        const minStat = Math.min(...values);
+        const avg = values.reduce((acc, val) => acc + val, 0) / values.length;
+
+        if (minStat <= 0) {
+          return { label: "Sick", animation: "bear-animate-sick", isSick: true };
+        }
+        if (avg > 80) return { label: "Delighted", animation: "bear-animate-happy", isSick: false };
+        if (avg > 55) return { label: "Content", animation: "bear-animate-happy", isSick: false };
+        if (avg > 35) return { label: "Sleepy", animation: "bear-animate-tired", isSick: false };
+        return { label: "Gloomy", animation: "bear-animate-tired", isSick: false };
+      }
+
+      // -- Button Handlers ---------------------------------------------------
+      function setupActions() {
+        document.getElementById("feedBtn").addEventListener("click", () => performAction("feed"));
+        document.getElementById("cleanBtn").addEventListener("click", () => performAction("clean"));
+        document.getElementById("playBtn").addEventListener("click", () => performAction("play"));
+        document.getElementById("sleepBtn").addEventListener("click", () => performAction("sleep"));
+      }
+
+      function getNextCaretaker() {
+        const name = CARETAKERS[state.caretakerTurn % CARETAKERS.length];
+        state.caretakerTurn += 1;
+        return name;
+      }
+
+      const ACTION_MESSAGES = {
+        feed: "served a honey snack to",
+        clean: "spruced up",
+        play: "played games with",
+        sleep: "tucked in",
+      };
+
+      const PURCHASE_MESSAGES = {
+        food: (buyer, item) => `${buyer} stocked the pantry with a ${item.label.toLowerCase()}.`,
+        boost: (buyer, item) => `${buyer} booked a special treat: ${item.label}.`,
+        bear: (buyer, item) => `${buyer} surprised the den with ${item.label}!`,
+        decor: (buyer, item) => `${buyer} refreshed the den with ${item.label}.`,
+      };
+
+      function performAction(action) {
+        const effects = ACTION_EFFECTS[action];
+        if (!effects) return;
+
+        for (const [key, amount] of Object.entries(effects)) {
+          state.bear[key] = clampStat(state.bear[key] + amount);
+        }
+
+        if (action === "feed" && state.inventory.food > 0) {
+          state.bear.hunger = clampStat(state.bear.hunger + 35);
+          state.inventory.food -= 1;
+          logActivity("Raided the pantry for a bonus jar of honey.");
+        }
+
+        const caretaker = getNextCaretaker();
+        const actionMessage = ACTION_MESSAGES[action] || "helped care for";
+        const bearName = getBearNickname();
+        logActivity(`${caretaker} ${actionMessage} ${bearName}.`);
+        saveState();
+        renderAll();
+      }
+
+      // -- Rendering & Loop --------------------------------------------------
+      function renderAll() {
+        renderStats();
+        renderBearCard();
+        renderCoins();
+        renderShop();
+        renderLog();
+      }
+
+      function gameLoop() {
+        applyTimeDecay();
+        checkPayday();
+        renderAll();
+        saveState();
+      }
+
+      // Run initial setup ----------------------------------------------------
+      setupActions();
+      renderAll();
+      setInterval(gameLoop, 1000);
+    </script>
+  </body>
+</html>
