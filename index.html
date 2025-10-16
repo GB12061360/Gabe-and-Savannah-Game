@@ -2,586 +2,1136 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Team Bear · Gabe &amp; Savannah</title>
-    <!-- Tailwind CSS CDN for quick styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gabe &amp; Savannah · Team Bear Home</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#f9a8d4" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <style>
-      /* Simple bear animation using keyframes */
-      @keyframes gentle-bounce {
+      body {
+        font-family: "Nunito", "Baloo 2", ui-rounded, "Segoe UI", sans-serif;
+      }
+      @keyframes bear-bob {
         0%,
         100% {
           transform: translateY(0);
         }
         50% {
-          transform: translateY(-6px);
+          transform: translateY(-8px);
         }
       }
-
-      .bear-animate-happy {
-        animation: gentle-bounce 2s infinite;
+      @keyframes bear-shake {
+        0% {
+          transform: translateX(0) rotate(0deg);
+        }
+        20% {
+          transform: translateX(-4px) rotate(-2deg);
+        }
+        40% {
+          transform: translateX(4px) rotate(2deg);
+        }
+        60% {
+          transform: translateX(-4px) rotate(-1deg);
+        }
+        80% {
+          transform: translateX(4px) rotate(1deg);
+        }
+        100% {
+          transform: translateX(0) rotate(0deg);
+        }
       }
-
-      .bear-animate-tired {
-        animation: gentle-bounce 4s infinite;
-        opacity: 0.8;
+      @keyframes sparkle-twirl {
+        0% {
+          opacity: 0.2;
+          transform: scale(0.6) rotate(0deg);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.1) rotate(30deg);
+        }
+        100% {
+          opacity: 0.2;
+          transform: scale(0.6) rotate(60deg);
+        }
       }
-
-      .bear-animate-sick {
-        animation: none;
-        filter: grayscale(0.5);
+      .bear-avatar {
+        animation: bear-bob 2.6s ease-in-out infinite;
+      }
+      .bear-avatar.hungry {
+        animation: bear-bob 3s ease-in-out infinite, bear-shake 0.9s ease-in-out infinite;
+      }
+      .bear-avatar.sparkle::after {
+        content: "✨";
+        position: absolute;
+        font-size: 2rem;
+        top: 18%;
+        right: 18%;
+        animation: sparkle-twirl 2.3s ease-in-out infinite;
+      }
+      .action-button {
+        position: relative;
+        overflow: hidden;
+      }
+      .action-button.disabled::after {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        border-radius: 9999px;
+        border: 2px solid rgba(255, 255, 255, 0.7);
+        border-top-color: rgba(244, 114, 182, 0.9);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .stat-float {
+        animation: float-up 0.9s ease-out forwards;
+      }
+      @keyframes float-up {
+        0% {
+          opacity: 0;
+          transform: translateY(10px) scale(0.9);
+        }
+        40% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-24px) scale(1.05);
+        }
+      }
+      .toast-enter {
+        animation: toast-slide 0.3s ease-out;
+      }
+      @keyframes toast-slide {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
     </style>
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100 text-slate-800">
-    <div class="max-w-5xl mx-auto py-12 px-6 space-y-10">
-      <header class="text-center space-y-3">
-        <h1 class="text-4xl md:text-5xl font-black text-rose-500 drop-shadow-sm">
-          Gabe &amp; Savannah's Team Bear 🐻
-        </h1>
-        <p class="text-lg max-w-2xl mx-auto text-slate-600">
-          Gabe and Savannah, welcome back to your cozy den! Team up to care for
-          your shared bear, keep an eye on every need, and celebrate each win
-          together.
-        </p>
-        <div class="grid gap-4 sm:grid-cols-2 text-left">
-          <div class="bg-white/70 rounded-3xl shadow px-5 py-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-rose-200 flex items-center justify-center text-xl">
-              G
-            </div>
-            <div>
-              <p class="text-base font-semibold">Gabe</p>
-              <p class="text-sm text-slate-500">Chief snack distributor &amp; bear DJ.</p>
-            </div>
-          </div>
-          <div class="bg-white/70 rounded-3xl shadow px-5 py-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-amber-200 flex items-center justify-center text-xl">
-              S
-            </div>
-            <div>
-              <p class="text-base font-semibold">Savannah</p>
-              <p class="text-sm text-slate-500">Cozy den decorator &amp; cuddle chief.</p>
-            </div>
-          </div>
-        </div>
-      </header>
+  <body class="min-h-screen bg-gradient-to-br from-pink-100 via-amber-100 to-sky-100 text-slate-800">
+    <div id="root"></div>
+    <div id="portal-root"></div>
 
-      <!-- Bear Display Card -->
-      <section
-        class="bg-white/80 backdrop-blur rounded-3xl shadow-xl px-6 py-10 grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-8"
-      >
-        <div class="flex flex-col items-center text-center space-y-4">
-          <div
-            id="bearAvatar"
-            class="w-60 h-60 rounded-full bg-gradient-to-br from-amber-200 via-amber-300 to-amber-100 flex flex-col items-center justify-center text-7xl shadow-inner border-4 border-white"
-          >
-            🐻
-          </div>
-          <div>
-            <p class="text-2xl font-semibold" id="bearName">Sunny the Cub</p>
-            <p class="text-sm text-slate-500" id="bearMood">Mood: Happy</p>
-            <p class="text-sm text-slate-500" id="bearStage">Stage: Cub</p>
-            <p class="text-sm text-slate-500" id="bearAge">Days Together: 0</p>
-          </div>
-        </div>
+    <script type="text/babel">
+      const { useState, useEffect, useMemo, useRef } = React;
 
-        <div class="space-y-6">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-xl font-semibold">Bear Health</h2>
-              <span
-                id="bearStatus"
-                class="text-sm font-medium px-2 py-1 rounded-full bg-emerald-100 text-emerald-700"
-                >Healthy</span
-              >
-            </div>
-            <div class="space-y-3" id="statsContainer"></div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              id="feedBtn"
-              class="rounded-2xl px-4 py-3 bg-emerald-400 hover:bg-emerald-500 text-white font-semibold shadow-md transition"
-            >
-              Feed 🍯
-            </button>
-            <button
-              id="cleanBtn"
-              class="rounded-2xl px-4 py-3 bg-sky-400 hover:bg-sky-500 text-white font-semibold shadow-md transition"
-            >
-              Clean 🫧
-            </button>
-            <button
-              id="playBtn"
-              class="rounded-2xl px-4 py-3 bg-rose-400 hover:bg-rose-500 text-white font-semibold shadow-md transition"
-            >
-              Play 🎈
-            </button>
-            <button
-              id="sleepBtn"
-              class="rounded-2xl px-4 py-3 bg-indigo-400 hover:bg-indigo-500 text-white font-semibold shadow-md transition"
-            >
-              Sleep 🌙
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Coin & shop section -->
-      <section class="grid md:grid-cols-3 gap-8">
-        <div class="md:col-span-1 bg-white/80 backdrop-blur rounded-3xl shadow-xl p-6 space-y-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Shared Wallet</h2>
-            <span id="coinCount" class="text-lg font-bold text-amber-500">0 🪙</span>
-          </div>
-          <p class="text-sm text-slate-500">
-            Your bear brings in coins when all stats stay above zero. Work together
-            to keep them healthy so they can contribute to the den fund!
-          </p>
-          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-sm">
-            <p class="font-semibold">Bear Earnings</p>
-            <p id="nextPayout">Next paycheck in: 3:00</p>
-          </div>
-          <div class="bg-white/70 border border-slate-200 rounded-2xl p-3 text-sm">
-            <p class="font-semibold">Pantry</p>
-            <p id="pantryCount">Honey jars: 0</p>
-          </div>
-        </div>
-
-        <div class="md:col-span-2 bg-white/80 backdrop-blur rounded-3xl shadow-xl p-6">
-          <h2 class="text-xl font-semibold mb-4">Den Boutique</h2>
-          <div class="grid md:grid-cols-2 gap-4" id="shopItems"></div>
-        </div>
-      </section>
-
-      <!-- Activity log -->
-      <section class="bg-white/70 backdrop-blur rounded-3xl shadow-xl p-6 space-y-3">
-        <h2 class="text-xl font-semibold">Activity Log</h2>
-        <ul id="activityLog" class="space-y-2 text-sm text-slate-600 max-h-48 overflow-y-auto">
-          <li class="text-slate-400">Gabe &amp; Savannah, welcome to your shared den!</li>
-        </ul>
-      </section>
-    </div>
-
-    <script>
-      // -- Game Constants ----------------------------------------------------
-      const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
-
-      const CARETAKERS = ["Gabe", "Savannah"];
-
-      const DEFAULT_STATE = {
-        bear: {
-          name: "Sunny the Cub",
-          hunger: 100,
-          energy: 100,
-          cleanliness: 100,
-          happiness: 100,
-          stage: "Cub",
-          ageSeconds: 0,
-          activeBearId: "golden",
-          decorations: "sunrise",
-        },
-        coins: 0,
-        lastUpdate: Date.now(),
-        lastPaycheck: Date.now(),
-        inventory: {
-          bears: ["golden"],
-          decorations: ["sunrise"],
-          food: 0,
-        },
-        log: ["Gabe & Savannah opened their shared den."],
-        caretakerTurn: 0,
-      };
-
-      // Rates define how quickly stats change in real time per minute.
+      const STORAGE_KEY = "team_bear_home";
       const DECAY_PER_MINUTE = {
-        hunger: 5,
-        energy: 3,
-        cleanliness: 4,
+        hunger: 6,
+        energy: 4,
+        cleanliness: 5,
         happiness: 3,
       };
-
-      const ACTION_EFFECTS = {
-        feed: { hunger: 22, happiness: 4 },
-        clean: { cleanliness: 25, happiness: 6 },
-        play: { happiness: 18, energy: -8, cleanliness: -4 },
-        sleep: { energy: 28, hunger: -6 },
+      const ACTION_DEFS = {
+        feed: {
+          label: "Feed 🍯",
+          color: "from-amber-400 to-amber-500",
+          stats: { hunger: 25, happiness: 5 },
+        },
+        clean: {
+          label: "Clean 🫧",
+          color: "from-sky-400 to-sky-500",
+          stats: { cleanliness: 25, happiness: 5 },
+        },
+        play: {
+          label: "Play 🎈",
+          color: "from-rose-400 to-rose-500",
+          stats: { happiness: 22, energy: -6, cleanliness: -4 },
+        },
+        sleep: {
+          label: "Sleep 🌙",
+          color: "from-indigo-400 to-indigo-500",
+          stats: { energy: 28, hunger: -8 },
+        },
       };
-
       const SHOP_ITEMS = [
         {
-          id: "cozy-snack",
-          type: "food",
-          label: "Jar of Honey",
-          description: "+35 Hunger (consumable)",
-          cost: 20,
-          apply: (state) => {
-            state.inventory.food += 1;
-          },
-        },
-        {
-          id: "bubble-bath",
-          type: "boost",
-          label: "Bubble Bath Day",
-          description: "Instantly +30 Cleanliness",
+          id: "honey",
+          name: "Honey Jar",
+          description: "+25 hunger (store in pantry)",
           cost: 35,
-          apply: (state) => {
-            state.bear.cleanliness = Math.min(100, state.bear.cleanliness + 30);
-          },
+          inventoryKey: "honey",
         },
         {
-          id: "new-bear",
-          type: "bear",
-          label: "Adopt a Cocoa Bear",
-          description: "Adds a new bear style",
-          cost: 120,
-          apply: (state) => {
-            if (!state.inventory.bears.includes("cocoa")) {
-              state.inventory.bears.push("cocoa");
-            }
-            state.bear.activeBearId = "cocoa";
-          },
+          id: "soap",
+          name: "Soft Soap",
+          description: "+25 cleanliness",
+          cost: 30,
+          inventoryKey: "soap",
         },
         {
-          id: "aurora-decor",
-          type: "decor",
-          label: "Aurora Lights",
-          description: "Glowing teal & violet den backdrop",
-          cost: 90,
-          apply: (state) => {
-            if (!state.inventory.decorations.includes("aurora")) {
-              state.inventory.decorations.push("aurora");
-            }
-            state.bear.decorations = "aurora";
-          },
+          id: "toy",
+          name: "Playful Toy",
+          description: "+25 happiness",
+          cost: 32,
+          inventoryKey: "toy",
+        },
+        {
+          id: "adopt",
+          name: "Adopt New Bear",
+          description: "Invite another bear to the den",
+          cost: 200,
+          inventoryKey: null,
         },
       ];
 
-      const BEAR_STYLES = {
-        golden: {
-          gradient: "from-amber-200 via-amber-300 to-amber-100",
-          emoji: "🐻",
-          name: "Sunny",
-        },
-        cocoa: {
-          gradient: "from-stone-300 via-amber-300 to-stone-200",
-          emoji: "🐻‍❄️",
-          name: "Cocoa",
-        },
+      const INITIAL_BEAR_NAMES = ["Sunny", "Clover", "Mochi", "River", "Aurora"];
+
+      const formatTime = (ms) => {
+        if (!ms || ms <= 0) return "00:00";
+        const totalSeconds = Math.ceil(ms / 1000);
+        const m = Math.floor(totalSeconds / 60)
+          .toString()
+          .padStart(2, "0");
+        const s = (totalSeconds % 60).toString().padStart(2, "0");
+        return `${m}:${s}`;
       };
 
-      const DECORATION_STYLES = {
-        sunrise: {
-          gradient: "from-rose-100 via-amber-100 to-sky-100",
-          text: "text-slate-800",
-        },
-        aurora: {
-          gradient: "from-slate-900 via-emerald-800 to-sky-900",
-          text: "text-slate-100",
-        },
+      const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
+
+      const randomEmoji = () => {
+        const choices = ["🌟", "💖", "🍯", "🧸", "🌈", "🎉", "✨", "🪄"];
+        return choices[Math.floor(Math.random() * choices.length)];
       };
 
-      const PAY_INTERVAL = 3 * 60 * 1000; // 3 minutes
-      const PAY_AMOUNT = 25;
+      const uuid = () =>
+        (window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID()
+          : Math.random().toString(36).slice(2));
 
-      function getBearNickname() {
-        const style = BEAR_STYLES[state.bear.activeBearId] || BEAR_STYLES.golden;
-        return style.name;
-      }
+      const toastUI = (() => {
+        let pushHandler = null;
+        return {
+          setHandler(fn) {
+            pushHandler = fn;
+          },
+          push(message, tone = "info") {
+            if (pushHandler) {
+              pushHandler({ id: uuid(), message, tone });
+            }
+          },
+        };
+      })();
 
-      // -- State Handling ----------------------------------------------------
-      let state = loadState();
+      const createBear = (name = "Sunny", id = `bear-${uuid()}`) => ({
+        id,
+        name,
+        ageMinutes: 0,
+        stage: "Cub",
+        stats: {
+          hunger: 85,
+          energy: 85,
+          cleanliness: 85,
+          happiness: 85,
+        },
+        sleeping: false,
+        working: false,
+      });
 
-      function loadState() {
-        const saved = localStorage.getItem("team-bear-save");
-        const defaults = deepClone(DEFAULT_STATE);
-        if (!saved) return defaults;
-        try {
-          const parsed = JSON.parse(saved);
+      const DEFAULT_STATE = () => ({
+        bears: [createBear(INITIAL_BEAR_NAMES[0], `bear-1`)],
+        activeBearId: `bear-1`,
+        coins: 0,
+        inventory: { honey: 0, soap: 0, toy: 0 },
+        log: [],
+        streak: { count: 0, lastCheckInDate: null },
+        workLedger: {},
+        lastSaved: Date.now(),
+        lastTick: Date.now(),
+        homeCode: null,
+      });
+
+      const addLogEntry = (state, text, timestamp = Date.now()) => {
+        const entry = { id: uuid(), text, timestamp };
+        const newLog = [entry, ...state.log];
+        return newLog.slice(0, 80);
+      };
+
+      const determineStage = (ageMinutes) => {
+        if (ageMinutes < 60) return "Cub";
+        if (ageMinutes < 180) return "Teen";
+        return "Adult";
+      };
+
+      const computeStageProgress = (ageMinutes) => {
+        if (ageMinutes < 60) {
+          return { label: "To Teen", percent: Math.min(100, (ageMinutes / 60) * 100) };
+        }
+        if (ageMinutes < 180) {
           return {
-            ...defaults,
-            ...parsed,
-            bear: { ...defaults.bear, ...(parsed.bear || {}) },
-            inventory: { ...defaults.inventory, ...(parsed.inventory || {}) },
-            log: parsed.log || defaults.log,
-            caretakerTurn: parsed.caretakerTurn ?? defaults.caretakerTurn,
+            label: "To Adult",
+            percent: Math.min(100, ((ageMinutes - 60) / 120) * 100),
           };
-        } catch (error) {
-          console.error("Failed to parse save, using defaults", error);
-          return defaults;
         }
-      }
+        return { label: "Fully Grown", percent: 100 };
+      };
 
-      function saveState() {
-        state.lastUpdate = Date.now();
-        localStorage.setItem("team-bear-save", JSON.stringify(state));
-      }
+      const qualifiesForWork = (bear) => {
+        const values = Object.values(bear.stats);
+        const minStat = Math.min(...values);
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        if (bear.stage !== "Adult") return { working: false, rate: 0, avg, min: minStat };
+        if (minStat < 50) return { working: false, rate: 0, avg, min: minStat };
+        return { working: true, rate: 2 + Math.floor(avg / 25), avg, min: minStat };
+      };
 
-      function logActivity(entry) {
-        state.log.unshift(`${new Date().toLocaleTimeString()} · ${entry}`);
-        state.log = state.log.slice(0, 40);
-        renderLog();
-      }
-
-      function renderLog() {
-        const logList = document.getElementById("activityLog");
-        logList.innerHTML = state.log
-          .map((entry) => `<li class="bg-white/70 rounded-2xl px-3 py-2 shadow-sm">${entry}</li>`)
-          .join("");
-      }
-
-      // -- Time Based Updates ------------------------------------------------
-      function applyTimeDecay() {
-        const now = Date.now();
-        const elapsed = now - state.lastUpdate;
-        if (elapsed <= 0) return;
-
-        const minutes = elapsed / 60000;
-        const seconds = elapsed / 1000;
-
-        // Reduce each stat based on elapsed time.
-        for (const key of Object.keys(DECAY_PER_MINUTE)) {
-          const decay = DECAY_PER_MINUTE[key] * minutes;
-          state.bear[key] = clampStat(state.bear[key] - decay);
+      const applyTimeAdvance = (state, deltaMs, now = Date.now()) => {
+        if (deltaMs <= 0) {
+          return state;
         }
+        const minutes = deltaMs / 60000;
+        let coinDelta = 0;
+        let logUpdates = state.log;
+        const workLedger = { ...state.workLedger };
 
-        // Grow the bear over time.
-        state.bear.ageSeconds += seconds;
-        updateBearStage();
+        const bears = state.bears.map((bear) => {
+          const stats = { ...bear.stats };
+          Object.keys(stats).forEach((key) => {
+            const decay = (DECAY_PER_MINUTE[key] || 0) * minutes;
+            stats[key] = clamp(stats[key] - decay);
+          });
 
-        state.lastUpdate = now;
-      }
+          const ageMinutes = bear.ageMinutes + minutes;
+          const stage = determineStage(ageMinutes);
 
-      function updateBearStage() {
-        const days = state.bear.ageSeconds / 86400;
-        if (days >= 6) {
-          state.bear.stage = "Adult";
-        } else if (days >= 2) {
-          state.bear.stage = "Teen";
-        } else {
-          state.bear.stage = "Cub";
-        }
-      }
+          const sickness = Object.values(stats).some((v) => v <= 0);
+          const workCheck = qualifiesForWork({ ...bear, stats, stage });
+          const ledger = workLedger[bear.id] || { progressMs: 0, nextPaycheckAt: null };
 
-      function clampStat(value) {
-        if (Number.isNaN(value)) return 0;
-        return Math.max(0, Math.min(100, value));
-      }
-
-      function checkPayday() {
-        const now = Date.now();
-        const healthy = Object.keys(DECAY_PER_MINUTE).every(
-          (statName) => state.bear[statName] > 0
-        );
-        const elapsed = now - state.lastPaycheck;
-
-        if (elapsed >= PAY_INTERVAL) {
-          if (healthy) {
-            const bearName = getBearNickname();
-            state.coins += PAY_AMOUNT;
-            logActivity(`${bearName} clocked in for Gabe & Savannah and earned ${PAY_AMOUNT} coins.`);
+          if (workCheck.working && !sickness) {
+            let progress = ledger.progressMs + deltaMs;
+            while (progress >= 60000) {
+              progress -= 60000;
+              coinDelta += workCheck.rate;
+              logUpdates = addLogEntry(
+                { ...state, log: logUpdates },
+                `${bear.name} completed a shift for ${workCheck.rate} coins!`
+              );
+            }
+            ledger.progressMs = progress;
+            ledger.nextPaycheckAt = now + Math.max(0, 60000 - progress);
           } else {
-            const bearName = getBearNickname();
-            logActivity(`${bearName} had to call in sick, so Gabe & Savannah missed this shift.`);
+            ledger.progressMs = 0;
+            ledger.nextPaycheckAt = null;
           }
-          state.lastPaycheck = now;
+          ledger.lastRate = workCheck.rate;
+          workLedger[bear.id] = ledger;
+
+          return {
+            ...bear,
+            stats,
+            ageMinutes,
+            stage,
+            working: workCheck.working && !sickness,
+            sleeping: bear.sleeping && stats.energy > 95 ? false : bear.sleeping,
+            sickness,
+          };
+        });
+
+        const updated = {
+          ...state,
+          bears,
+          coins: state.coins + coinDelta,
+          workLedger,
+          log: logUpdates,
+          lastTick: now,
+          lastSaved: now,
+        };
+        return updated;
+      };
+
+      const getPayCountdown = (state, bearId) => {
+        const ledger = state.workLedger[bearId];
+        if (!ledger || !ledger.nextPaycheckAt) return null;
+        return ledger.nextPaycheckAt - Date.now();
+      };
+
+      const ACTION_AUDIO = {
+        feed: 440,
+        clean: 520,
+        play: 660,
+        sleep: 350,
+      };
+
+      const useAudio = () => {
+        const ctxRef = useRef(null);
+        const ensureContext = () => {
+          if (!ctxRef.current) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            ctxRef.current = AudioContext ? new AudioContext() : null;
+          }
+          return ctxRef.current;
+        };
+        const playTone = (freq = 440, duration = 0.18) => {
+          const ctx = ensureContext();
+          if (!ctx) return;
+          const oscillator = ctx.createOscillator();
+          const gain = ctx.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.value = freq;
+          gain.gain.setValueAtTime(0.18, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+          oscillator.connect(gain).connect(ctx.destination);
+          oscillator.start();
+          oscillator.stop(ctx.currentTime + duration);
+        };
+        return { playTone };
+      };
+
+      const loadStoredHome = () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (err) {
+          console.error("Failed to parse stored home", err);
+          return null;
         }
+      };
 
-        // Update countdown text.
-        const remaining = Math.max(0, PAY_INTERVAL - (now - state.lastPaycheck));
-        const minutes = String(Math.floor(remaining / 60000)).padStart(1, "0");
-        const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
-        document.getElementById("nextPayout").textContent = `Next paycheck in: ${minutes}:${seconds}`;
-      }
+      const persistHome = (payload) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      };
 
-      // -- UI Rendering ------------------------------------------------------
-      function renderStats() {
-        const container = document.getElementById("statsContainer");
-        const stats = [
-          { key: "hunger", label: "Hunger" },
-          { key: "energy", label: "Energy" },
-          { key: "cleanliness", label: "Cleanliness" },
-          { key: "happiness", label: "Happiness" },
+      const FirebaseContext = React.createContext({ firestore: null });
+
+      const FirebaseProvider = ({ children, onHomeLoaded }) => {
+        const [firestore, setFirestore] = useState(null);
+
+        useEffect(() => {
+          if (!window.BEARBUDDY_FIREBASE_CONFIG) return;
+          const waitForFirebase = () => {
+            if (window.firebase && window.firebase.initializeApp) {
+              const app = window.firebase.apps?.length
+                ? window.firebase.apps[0]
+                : window.firebase.initializeApp(window.BEARBUDDY_FIREBASE_CONFIG);
+              const db = window.firebase.firestore(app);
+              setFirestore(db);
+            } else {
+              setTimeout(waitForFirebase, 200);
+            }
+          };
+          waitForFirebase();
+        }, []);
+
+        useEffect(() => {
+          if (firestore) {
+            onHomeLoaded?.(true);
+          }
+        }, [firestore, onHomeLoaded]);
+
+        return <FirebaseContext.Provider value={{ firestore }}>{children}</FirebaseContext.Provider>;
+      };
+
+      const useFirebase = () => React.useContext(FirebaseContext);
+
+      const useRemoteSync = ({ gameState, setGameState, homeCode }) => {
+        const { firestore } = useFirebase();
+        const lastSyncedRef = useRef(0);
+
+        useEffect(() => {
+          if (!firestore || !homeCode) return;
+          const docRef = firestore.collection("homes").doc(homeCode);
+          let unsub = docRef.onSnapshot((snap) => {
+            if (!snap.exists) return;
+            const data = snap.data();
+            if (!data || !data.state) return;
+            const remoteState = data.state;
+            if (!remoteState.lastSaved) return;
+            if (!gameState || remoteState.lastSaved > gameState.lastSaved) {
+              setGameState((prev) => ({ ...prev, ...remoteState }));
+            }
+          });
+          return () => unsub && unsub();
+        }, [firestore, homeCode]);
+
+        useEffect(() => {
+          if (!firestore || !homeCode || !gameState) return;
+          const now = Date.now();
+          if (now - lastSyncedRef.current < 4000) return;
+          lastSyncedRef.current = now;
+          const docRef = firestore.collection("homes").doc(homeCode);
+          docRef.set({
+            state: gameState,
+            lastSaved: gameState.lastSaved,
+          });
+        }, [firestore, homeCode, gameState]);
+      };
+
+      const FloatingIndicators = ({ indicators }) => (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
+          <div className="relative w-full max-w-xl mx-auto">
+            {indicators.map((indicator) => (
+              <div
+                key={indicator.id}
+                className="stat-float absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-emerald-600"
+                style={{ top: indicator.offset }}
+              >
+                {indicator.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      const ToastStack = ({ toasts, dismiss }) => (
+        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`toast-enter rounded-2xl px-4 py-3 shadow-lg backdrop-blur bg-white/90 border flex items-center gap-2 ${
+                toast.tone === "error" ? "border-rose-300 text-rose-500" : "border-emerald-300 text-emerald-600"
+              }`}
+            >
+              <span>{toast.message}</span>
+              <button
+                className="text-xs text-slate-500 hover:text-slate-700"
+                onClick={() => dismiss(toast.id)}
+              >
+                Close
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+
+      const StageProgress = ({ bear }) => {
+        const { label, percent } = computeStageProgress(bear.ageMinutes);
+        return (
+          <div>
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>{label}</span>
+              <span>{percent.toFixed(0)}%</span>
+            </div>
+            <div className="h-2 bg-white/40 rounded-full mt-1 overflow-hidden">
+              <div className="h-full bg-emerald-400" style={{ width: `${percent}%` }}></div>
+            </div>
+          </div>
+        );
+      };
+
+      const StatBar = ({ label, value }) => {
+        const color = value > 70 ? "bg-emerald-400" : value > 40 ? "bg-amber-400" : "bg-rose-400";
+        return (
+          <div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold">{label}</span>
+              <span>{Math.round(value)}</span>
+            </div>
+            <div className="h-3 bg-white/40 rounded-full overflow-hidden">
+              <div className={`h-full ${color}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }}></div>
+            </div>
+          </div>
+        );
+      };
+
+      const InventoryPanel = ({ inventory, onUseItem, disabled }) => {
+        const items = [
+          { key: "honey", label: "Honey", description: "+25 hunger" },
+          { key: "soap", label: "Soap", description: "+25 cleanliness" },
+          { key: "toy", label: "Toy", description: "+25 happiness" },
         ];
-
-        container.innerHTML = stats
-          .map(({ key, label }) => {
-            const value = Math.round(state.bear[key]);
-            const barColor = value > 60 ? "bg-emerald-400" : value > 30 ? "bg-amber-400" : "bg-rose-400";
-            return `
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <span class="font-medium">${label}</span>
-                  <span class="text-sm">${value}</span>
+        return (
+          <div className="bg-white/70 rounded-3xl p-4 shadow-inner space-y-3">
+            <h3 className="font-semibold flex items-center gap-2 text-lg">Pantry &amp; Care Kit 🍱</h3>
+            {items.map((item) => (
+              <div key={item.key} className="flex items-center justify-between text-sm">
+                <div>
+                  <p className="font-semibold">{item.label}</p>
+                  <p className="text-slate-500">{item.description}</p>
                 </div>
-                <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                  <div class="h-full ${barColor}" style="width: ${value}%"></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-500 font-bold">{inventory[item.key] ?? 0}</span>
+                  <button
+                    onClick={() => onUseItem(item.key)}
+                    disabled={disabled || (inventory[item.key] ?? 0) === 0}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
+                      inventory[item.key] > 0
+                        ? "bg-emerald-400 text-white hover:bg-emerald-500"
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Use
+                  </button>
                 </div>
               </div>
-            `;
-          })
-          .join("");
-      }
+            ))}
+          </div>
+        );
+      };
 
-      function renderBearCard() {
-        const bearStyle = BEAR_STYLES[state.bear.activeBearId] || BEAR_STYLES.golden;
-        const bearAvatar = document.getElementById("bearAvatar");
-        const mood = calculateMood();
-
-        bearAvatar.className = `w-60 h-60 rounded-full bg-gradient-to-br ${bearStyle.gradient} flex flex-col items-center justify-center text-7xl shadow-inner border-4 border-white ${mood.animation}`;
-        bearAvatar.textContent = bearStyle.emoji;
-
-        const decor = DECORATION_STYLES[state.bear.decorations] || DECORATION_STYLES.sunrise;
-        document.body.className = `min-h-screen bg-gradient-to-br ${decor.gradient} ${decor.text}`;
-
-        document.getElementById("bearName").textContent = `${bearStyle.name} the ${state.bear.stage}`;
-        document.getElementById("bearMood").textContent = `Mood: ${mood.label}`;
-        document.getElementById("bearStage").textContent = `Stage: ${state.bear.stage}`;
-        document.getElementById("bearAge").textContent = `Days Together: ${Math.floor(state.bear.ageSeconds / 86400)}`;
-
-        const statusBadge = document.getElementById("bearStatus");
-        if (mood.isSick) {
-          statusBadge.textContent = "Sick";
-          statusBadge.className = "text-sm font-medium px-2 py-1 rounded-full bg-rose-100 text-rose-600";
-        } else {
-          statusBadge.textContent = "Healthy";
-          statusBadge.className = "text-sm font-medium px-2 py-1 rounded-full bg-emerald-100 text-emerald-700";
-        }
-      }
-
-      function renderCoins() {
-        document.getElementById("coinCount").textContent = `${state.coins} 🪙`;
-        document.getElementById("pantryCount").textContent = `Honey jars: ${state.inventory.food}`;
-      }
-
-      function renderShop() {
-        const shop = document.getElementById("shopItems");
-        shop.innerHTML = SHOP_ITEMS.map((item) => {
-          const affordable = state.coins >= item.cost;
-          return `
-            <div class="rounded-3xl border border-slate-200 bg-white/70 p-4 flex flex-col gap-3 shadow-sm">
-              <div>
-                <p class="text-lg font-semibold">${item.label}</p>
-                <p class="text-sm text-slate-500">${item.description}</p>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-amber-500 font-semibold">${item.cost} 🪙</span>
-                <button
-                  data-item="${item.id}"
-                  class="buy-btn rounded-2xl px-3 py-2 text-sm font-semibold ${affordable ? "bg-rose-400 hover:bg-rose-500 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}"
-                  ${affordable ? "" : "disabled"}
-                >
-                  Purchase
+      const ShopPanel = ({ open, onClose, coins, onPurchase }) => {
+        return (
+          <div
+            className={`fixed inset-0 z-40 transition ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+          >
+            <div
+              className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity ${
+                open ? "opacity-100" : "opacity-0"
+              }`}
+              onClick={onClose}
+            ></div>
+            <div
+              className={`absolute right-0 top-0 h-full w-full sm:w-96 bg-gradient-to-b from-white/95 to-white/80 p-6 shadow-xl transition-transform duration-300 ${
+                open ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Den Boutique</h2>
+                <button className="text-sm text-slate-500" onClick={onClose}>
+                  Close
                 </button>
               </div>
+              <p className="text-sm text-slate-500 mb-4">
+                Spend wisely! Items head straight into your shared pantry or invite new friends.
+              </p>
+              <div className="space-y-4">
+                {SHOP_ITEMS.map((item) => {
+                  const affordable = coins >= item.cost;
+                  return (
+                    <div key={item.id} className="p-4 rounded-3xl bg-white/90 shadow border border-white/60">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-lg">{item.name}</p>
+                          <p className="text-sm text-slate-500">{item.description}</p>
+                        </div>
+                        <span className="text-amber-500 font-bold">{item.cost} 🪙</span>
+                      </div>
+                      <button
+                        onClick={() => onPurchase(item)}
+                        disabled={!affordable}
+                        className={`mt-3 w-full py-2 rounded-2xl font-semibold transition ${
+                          affordable
+                            ? "bg-rose-400 hover:bg-rose-500 text-white"
+                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          `;
-        }).join("");
+          </div>
+        );
+      };
 
-        shop.querySelectorAll(".buy-btn").forEach((button) => {
-          button.addEventListener("click", () => {
-            const item = SHOP_ITEMS.find((shopItem) => shopItem.id === button.dataset.item);
-            if (!item) return;
-            if (state.coins < item.cost) return;
+      const ActionButtons = ({ onAction, cooldowns, disabled }) => (
+        <div className="grid grid-cols-2 gap-3">
+          {Object.entries(ACTION_DEFS).map(([key, action]) => {
+            const isCooling = cooldowns[key];
+            return (
+              <button
+                key={key}
+                onClick={() => onAction(key)}
+                disabled={disabled || isCooling}
+                className={`action-button rounded-3xl bg-gradient-to-br ${action.color} px-4 py-3 font-semibold text-white shadow-lg transition hover:shadow-xl ${
+                  disabled || isCooling ? "opacity-60 cursor-not-allowed disabled" : ""
+                }`}
+              >
+                {action.label}
+              </button>
+            );
+          })}
+        </div>
+      );
 
-            state.coins -= item.cost;
-            item.apply(state);
-            const buyer = getNextCaretaker();
-            const purchaseMessage = PURCHASE_MESSAGES[item.type]
-              ? PURCHASE_MESSAGES[item.type](buyer, item)
-              : `${buyer} picked up ${item.label}.`;
-            logActivity(purchaseMessage);
-            saveState();
-            renderAll();
+      const ActivityLog = ({ entries }) => (
+        <div className="bg-white/70 rounded-3xl shadow-xl p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold">Activity Log</h2>
+            <span className="text-sm text-slate-500">Latest updates from the den</span>
+          </div>
+          <ul className="space-y-2 max-h-64 overflow-y-auto pr-1 text-sm">
+            {entries.length === 0 && (
+              <li className="text-slate-400">Your log will appear here as you care for the bears.</li>
+            )}
+            {entries.map((entry) => (
+              <li key={entry.id} className="bg-white/80 rounded-2xl px-3 py-2 shadow border border-white/60">
+                <div className="text-slate-500 text-xs">
+                  {new Date(entry.timestamp).toLocaleString()}
+                </div>
+                <div>{entry.text}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+
+      const BearCarousel = ({ bears, activeBearId, onSelect }) => {
+        if (bears.length <= 1) return null;
+        const currentIndex = bears.findIndex((bear) => bear.id === activeBearId);
+        const prevBear = bears[(currentIndex - 1 + bears.length) % bears.length];
+        const nextBear = bears[(currentIndex + 1) % bears.length];
+        return (
+          <div className="flex items-center justify-between bg-white/60 rounded-full px-4 py-2 text-sm text-slate-600">
+            <button onClick={() => onSelect(prevBear.id)} className="hover:text-rose-500">
+              ← {prevBear.name}
+            </button>
+            <span>Switch Bear</span>
+            <button onClick={() => onSelect(nextBear.id)} className="hover:text-emerald-500">
+              {nextBear.name} →
+            </button>
+          </div>
+        );
+      };
+
+      const CheckInPanel = ({ streak, onCheckIn, disabled }) => {
+        const today = new Date().toLocaleDateString();
+        const alreadyChecked = streak.lastCheckInDate === today;
+        return (
+          <div className="bg-white/70 rounded-3xl p-4 shadow-inner">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Daily Team Check-In</h3>
+                <p className="text-sm text-slate-500">
+                  Keep your streak alive for bonus coins! {alreadyChecked ? "Already checked in today." : ""}
+                </p>
+              </div>
+              <span className="font-bold text-emerald-500">{streak.count} day streak</span>
+            </div>
+            <button
+              onClick={onCheckIn}
+              disabled={disabled || alreadyChecked}
+              className={`mt-3 w-full py-2 rounded-2xl font-semibold transition ${
+                alreadyChecked
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-emerald-400 hover:bg-emerald-500 text-white"
+              }`}
+            >
+              {alreadyChecked ? "Come back tomorrow" : "Check In +10 coins"}
+            </button>
+          </div>
+        );
+      };
+
+      const HomeGate = ({ onCreate, onJoin, busy }) => {
+        const [code, setCode] = useState("");
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100 text-slate-700 p-6">
+            <div className="bg-white/80 rounded-3xl shadow-2xl p-8 max-w-md w-full space-y-5 text-center">
+              <h1 className="text-3xl font-black text-rose-500">Team Bear Homes</h1>
+              <p className="text-sm text-slate-500">
+                Enter an existing home code or create a fresh den to sync across devices.
+              </p>
+              <div className="space-y-3">
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.trim().toUpperCase())}
+                  className="w-full rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-center focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  placeholder="HOME CODE"
+                />
+                <button
+                  onClick={() => onJoin(code)}
+                  disabled={!code || busy}
+                  className="w-full py-3 rounded-2xl bg-rose-400 hover:bg-rose-500 text-white font-semibold disabled:opacity-60"
+                >
+                  Enter Home
+                </button>
+              </div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide">or</div>
+              <button
+                onClick={onCreate}
+                disabled={busy}
+                className="w-full py-3 rounded-2xl bg-emerald-400 hover:bg-emerald-500 text-white font-semibold disabled:opacity-60"
+              >
+                Create New Home
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [gameState, setGameState] = useState(null);
+        const [loaded, setLoaded] = useState(false);
+        const [showShop, setShowShop] = useState(false);
+        const [cooldowns, setCooldowns] = useState({});
+        const [indicators, setIndicators] = useState([]);
+        const [toasts, setToasts] = useState([]);
+        const [firebaseRequired, setFirebaseRequired] = useState(false);
+        const [homeReady, setHomeReady] = useState(false);
+        const { playTone } = useAudio();
+
+        useEffect(() => {
+          toastUI.setHandler((toast) => {
+            setToasts((prev) => [...prev, toast]);
+            setTimeout(() => {
+              setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+            }, 3500);
           });
+        }, []);
+
+        useEffect(() => {
+          const stored = loadStoredHome();
+          let state = stored?.state || DEFAULT_STATE();
+          const now = Date.now();
+          if (state.lastSaved && now > state.lastSaved) {
+            state = applyTimeAdvance(state, now - state.lastSaved, now);
+          }
+          state.homeCode = stored?.homeCode ?? null;
+          setGameState(state);
+          setLoaded(true);
+          setFirebaseRequired(Boolean(window.BEARBUDDY_FIREBASE_CONFIG));
+        }, []);
+
+        useEffect(() => {
+          if (!loaded || !gameState) return;
+          persistHome({ state: gameState, homeCode: gameState.homeCode || null });
+        }, [gameState, loaded]);
+
+        useRemoteSync({ gameState, setGameState, homeCode: gameState?.homeCode });
+
+        useEffect(() => {
+          if (!gameState) return;
+          const loop = setInterval(() => {
+            setGameState((prev) => applyTimeAdvance(prev, Date.now() - prev.lastTick, Date.now()));
+          }, 1000);
+          return () => clearInterval(loop);
+        }, [gameState?.homeCode]);
+
+        const activeBear = useMemo(() => {
+          if (!gameState) return null;
+          return gameState.bears.find((bear) => bear.id === gameState.activeBearId) || gameState.bears[0];
+        }, [gameState]);
+
+        const handleAction = (actionKey) => {
+          if (!gameState || !activeBear) return;
+          const now = Date.now();
+          const action = ACTION_DEFS[actionKey];
+          if (!action) return;
+          playTone(ACTION_AUDIO[actionKey] || 480, 0.2);
+          setCooldowns((prev) => ({ ...prev, [actionKey]: true }));
+          setTimeout(() => {
+            setCooldowns((prev) => ({ ...prev, [actionKey]: false }));
+          }, 1000);
+
+          setGameState((prev) => {
+            const bears = prev.bears.map((bear) => {
+              if (bear.id !== activeBear.id) return bear;
+              const newStats = { ...bear.stats };
+              Object.entries(action.stats).forEach(([key, delta]) => {
+                newStats[key] = clamp(newStats[key] + delta);
+              });
+              if (actionKey === "sleep") {
+                newStats.energy = clamp(newStats.energy + 6);
+              }
+              const sickness = Object.values(newStats).some((v) => v <= 0);
+              const stage = determineStage(bear.ageMinutes);
+              return { ...bear, stats: newStats, sleeping: actionKey === "sleep", sickness, stage };
+            });
+            const diffTexts = Object.entries(action.stats)
+              .map(([key, delta]) => `${delta > 0 ? "+" : ""}${delta} ${key}`)
+              .join(" · ");
+            const log = addLogEntry(prev, `${action.label.split(" ")[0]} ${activeBear.name}: ${diffTexts}`);
+            return applyTimeAdvance({ ...prev, bears, log }, 0, now);
+          });
+
+          setIndicators((prev) => [
+            ...prev,
+            {
+              id: uuid(),
+              text: Object.entries(action.stats)
+                .map(([key, delta]) => `${delta > 0 ? "+" : ""}${delta} ${key}`)
+                .join(" • "),
+              offset: "45%",
+            },
+          ]);
+
+          setTimeout(() => {
+            setIndicators((prev) => prev.slice(1));
+          }, 900);
+        };
+
+        const handleUseItem = (key) => {
+          if (!gameState || !activeBear) return;
+          if (!gameState.inventory[key]) {
+            toastUI.push("Pantry is empty for that item!", "error");
+            return;
+          }
+          setGameState((prev) => {
+            const bears = prev.bears.map((bear) => {
+              if (bear.id !== activeBear.id) return bear;
+              const stats = { ...bear.stats };
+              if (key === "honey") stats.hunger = clamp(stats.hunger + 25);
+              if (key === "soap") stats.cleanliness = clamp(stats.cleanliness + 25);
+              if (key === "toy") stats.happiness = clamp(stats.happiness + 25);
+              const sickness = Object.values(stats).some((v) => v <= 0);
+              return { ...bear, stats, sickness };
+            });
+            const inventory = { ...prev.inventory, [key]: prev.inventory[key] - 1 };
+            const log = addLogEntry(prev, `${activeBear.name} enjoyed ${key}. ${randomEmoji()}`);
+            return applyTimeAdvance({ ...prev, bears, inventory, log }, 0, Date.now());
+          });
+        };
+
+        const handlePurchase = (item) => {
+          if (!gameState) return;
+          if (gameState.coins < item.cost) {
+            toastUI.push("Not enough coins for that treasure!", "error");
+            return;
+          }
+          setGameState((prev) => {
+            let bears = prev.bears;
+            let inventory = { ...prev.inventory };
+            let log = prev.log;
+            if (item.inventoryKey) {
+              inventory[item.inventoryKey] = (inventory[item.inventoryKey] || 0) + 1;
+              log = addLogEntry(prev, `${item.name} stocked in the pantry.`);
+            } else if (item.id === "adopt") {
+              const newName = INITIAL_BEAR_NAMES[prev.bears.length % INITIAL_BEAR_NAMES.length];
+              const newBear = createBear(newName);
+              bears = [...prev.bears, newBear];
+              log = addLogEntry(prev, `${newName} joined the den! ${randomEmoji()}`);
+            }
+            const coins = prev.coins - item.cost;
+            toastUI.push(`${item.name} purchased!`, "info");
+            return applyTimeAdvance({ ...prev, bears, inventory, coins, log }, 0, Date.now());
+          });
+        };
+
+        const handleSelectBear = (bearId) => {
+          setGameState((prev) => ({ ...prev, activeBearId: bearId }));
+        };
+
+        const handleCheckIn = () => {
+          if (!gameState) return;
+          const today = new Date().toLocaleDateString();
+          if (gameState.streak.lastCheckInDate === today) return;
+          setGameState((prev) => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const prevDate = prev.streak.lastCheckInDate;
+            const continued = prevDate === yesterday.toLocaleDateString();
+            const newCount = continued ? prev.streak.count + 1 : 1;
+            let bonus = 10;
+            if (newCount % 7 === 0) {
+              bonus += 50;
+            }
+            const log = addLogEntry(prev, `Team check-in streak ${newCount}! +${bonus} coins.`);
+            toastUI.push(`Check-in complete! +${bonus} coins`, "info");
+            return applyTimeAdvance(
+              {
+                ...prev,
+                coins: prev.coins + bonus,
+                streak: { count: newCount, lastCheckInDate: today },
+                log,
+              },
+              0,
+              Date.now()
+            );
+          });
+        };
+
+        const registerHome = (code) => {
+          setGameState((prev) => ({ ...prev, homeCode: code }));
+          setHomeReady(true);
+        };
+
+        const handleCreateHome = () => {
+          const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+          toastUI.push(`New home created: ${code}`, "info");
+          registerHome(code);
+        };
+
+        const handleJoinHome = (code) => {
+          if (!code) return;
+          registerHome(code);
+        };
+
+        useEffect(() => {
+          if (!firebaseRequired) {
+            setHomeReady(true);
+          } else if (gameState?.homeCode) {
+            setHomeReady(true);
+          }
+        }, [firebaseRequired, gameState?.homeCode]);
+
+        const dismissToast = (id) => {
+          setToasts((prev) => prev.filter((toast) => toast.id !== id));
+        };
+
+        if (!loaded || !gameState) {
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100">
+              <div className="text-center space-y-4">
+                <div className="text-4xl">🐻</div>
+                <p className="text-slate-600">Preparing the cozy den…</p>
+              </div>
+            </div>
+          );
+        }
+
+        if (firebaseRequired && !homeReady) {
+          return <HomeGate busy={false} onCreate={handleCreateHome} onJoin={handleJoinHome} />;
+        }
+
+        const countdown = activeBear ? getPayCountdown(gameState, activeBear.id) : null;
+        const moodEmoji = activeBear?.sickness
+          ? "🤒"
+          : activeBear && activeBear.stats.happiness > 80
+          ? "🥰"
+          : activeBear && activeBear.stats.hunger < 30
+          ? "😬"
+          : "😊";
+        const daysTogether = activeBear ? Math.floor(activeBear.ageMinutes / (60 * 24)) : 0;
+        const onShift = activeBear?.working;
+
+        return (
+          <div className="relative min-h-screen pb-20">
+            <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+              <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                  <h1 className="text-4xl md:text-5xl font-black text-rose-500 drop-shadow-sm">
+                    Gabe &amp; Savannah's Team Bear {moodEmoji}
+                  </h1>
+                  <p className="text-slate-600 max-w-2xl mt-2">
+                    Care together, earn together. Keep every bear in the den happy, healthy, and ready for big adventures.
+                  </p>
+                </div>
+                <div className="bg-white/80 rounded-3xl px-5 py-4 shadow-lg border border-white/70">
+                  <p className="text-sm text-slate-500">Days together</p>
+                  <p className="text-3xl font-black text-emerald-500">{daysTogether}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${onShift ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"}`}>
+                      {onShift ? "On shift" : "Off shift"}
+                    </span>
+                    {activeBear?.sickness && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-500">
+                        Needs rest
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-500">
+                      Streak {gameState.streak.count}
+                    </span>
+                  </div>
+                </div>
+              </header>
+
+              <BearCarousel bears={gameState.bears} activeBearId={activeBear?.id} onSelect={handleSelectBear} />
+
+              <section className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
+                <div className="bg-white/80 rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-6">
+                  <div
+                    className={`relative w-64 h-64 rounded-full bg-gradient-to-br from-amber-200 via-amber-300 to-amber-100 shadow-inner border-4 border-white flex items-center justify-center text-8xl bear-avatar ${
+                      activeBear?.stats.hunger < 30 ? "hungry" : ""
+                    } ${activeBear?.stats.happiness > 80 ? "sparkle" : ""}`}
+                  >
+                    <span>{activeBear?.sickness ? "🤒" : "🐻"}</span>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-black">{activeBear?.name}</h2>
+                    <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-500 font-semibold">{activeBear?.stage}</span>
+                      <span>{moodEmoji} Mood</span>
+                    </div>
+                    {activeBear && <StageProgress bear={activeBear} />}
+                    <div className="text-sm text-slate-500">
+                      Paycheck in: {countdown ? formatTime(countdown) : "—"} {countdown && <span>({gameState.workLedger[activeBear.id]?.lastRate || 0} 🪙/min)</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold">Bear Health</h3>
+                      <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                        activeBear?.sickness ? "bg-rose-100 text-rose-500" : "bg-emerald-100 text-emerald-600"
+                      }`}>
+                        {activeBear?.sickness ? "Sick" : "Healthy"}
+                      </span>
+                    </div>
+                    {activeBear && (
+                      <div className="space-y-3">
+                        <StatBar label="Hunger" value={activeBear.stats.hunger} />
+                        <StatBar label="Energy" value={activeBear.stats.energy} />
+                        <StatBar label="Cleanliness" value={activeBear.stats.cleanliness} />
+                        <StatBar label="Happiness" value={activeBear.stats.happiness} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
+                    <h3 className="text-xl font-bold">Actions</h3>
+                    <ActionButtons
+                      onAction={handleAction}
+                      cooldowns={cooldowns}
+                      disabled={!activeBear || activeBear.sickness}
+                    />
+                  </div>
+
+                  <InventoryPanel inventory={gameState.inventory} onUseItem={handleUseItem} disabled={!activeBear} />
+                </div>
+              </section>
+
+              <section className="grid lg:grid-cols-[1fr_1fr] gap-6">
+                <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold">Shared Wallet</h3>
+                      <p className="text-sm text-slate-500">Keep every stat above 50 to stay on shift and earn steady pay.</p>
+                    </div>
+                    <div className="text-3xl font-black text-amber-500">{gameState.coins} 🪙</div>
+                  </div>
+                  <button
+                    onClick={() => setShowShop(true)}
+                    className="w-full py-3 rounded-2xl bg-rose-400 hover:bg-rose-500 text-white font-semibold"
+                  >
+                    Visit Boutique
+                  </button>
+                  <CheckInPanel streak={gameState.streak} onCheckIn={handleCheckIn} disabled={!activeBear} />
+                </div>
+
+                <ActivityLog entries={gameState.log} />
+              </section>
+            </div>
+
+            <ShopPanel open={showShop} onClose={() => setShowShop(false)} coins={gameState.coins} onPurchase={handlePurchase} />
+            <ToastStack toasts={toasts} dismiss={dismissToast} />
+            {indicators.length > 0 && <FloatingIndicators indicators={indicators} />}
+          </div>
+        );
+      };
+
+      const RootApp = () => {
+        const [firebaseReady, setFirebaseReady] = useState(false);
+        return (
+          <FirebaseProvider onHomeLoaded={() => setFirebaseReady(true)}>
+            <App firebaseReady={firebaseReady} />
+          </FirebaseProvider>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<RootApp />);
+    </script>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .catch((err) => console.warn("Service worker registration failed", err));
         });
       }
-
-      // Determine mood based on stats.
-      function calculateMood() {
-        const values = [state.bear.hunger, state.bear.energy, state.bear.cleanliness, state.bear.happiness];
-        const minStat = Math.min(...values);
-        const avg = values.reduce((acc, val) => acc + val, 0) / values.length;
-
-        if (minStat <= 0) {
-          return { label: "Sick", animation: "bear-animate-sick", isSick: true };
-        }
-        if (avg > 80) return { label: "Delighted", animation: "bear-animate-happy", isSick: false };
-        if (avg > 55) return { label: "Content", animation: "bear-animate-happy", isSick: false };
-        if (avg > 35) return { label: "Sleepy", animation: "bear-animate-tired", isSick: false };
-        return { label: "Gloomy", animation: "bear-animate-tired", isSick: false };
-      }
-
-      // -- Button Handlers ---------------------------------------------------
-      function setupActions() {
-        document.getElementById("feedBtn").addEventListener("click", () => performAction("feed"));
-        document.getElementById("cleanBtn").addEventListener("click", () => performAction("clean"));
-        document.getElementById("playBtn").addEventListener("click", () => performAction("play"));
-        document.getElementById("sleepBtn").addEventListener("click", () => performAction("sleep"));
-      }
-
-      function getNextCaretaker() {
-        const name = CARETAKERS[state.caretakerTurn % CARETAKERS.length];
-        state.caretakerTurn += 1;
-        return name;
-      }
-
-      const ACTION_MESSAGES = {
-        feed: "served a honey snack to",
-        clean: "spruced up",
-        play: "played games with",
-        sleep: "tucked in",
-      };
-
-      const PURCHASE_MESSAGES = {
-        food: (buyer, item) => `${buyer} stocked the pantry with a ${item.label.toLowerCase()}.`,
-        boost: (buyer, item) => `${buyer} booked a special treat: ${item.label}.`,
-        bear: (buyer, item) => `${buyer} surprised the den with ${item.label}!`,
-        decor: (buyer, item) => `${buyer} refreshed the den with ${item.label}.`,
-      };
-
-      function performAction(action) {
-        const effects = ACTION_EFFECTS[action];
-        if (!effects) return;
-
-        for (const [key, amount] of Object.entries(effects)) {
-          state.bear[key] = clampStat(state.bear[key] + amount);
-        }
-
-        if (action === "feed" && state.inventory.food > 0) {
-          state.bear.hunger = clampStat(state.bear.hunger + 35);
-          state.inventory.food -= 1;
-          logActivity("Raided the pantry for a bonus jar of honey.");
-        }
-
-        const caretaker = getNextCaretaker();
-        const actionMessage = ACTION_MESSAGES[action] || "helped care for";
-        const bearName = getBearNickname();
-        logActivity(`${caretaker} ${actionMessage} ${bearName}.`);
-        saveState();
-        renderAll();
-      }
-
-      // -- Rendering & Loop --------------------------------------------------
-      function renderAll() {
-        renderStats();
-        renderBearCard();
-        renderCoins();
-        renderShop();
-        renderLog();
-      }
-
-      function gameLoop() {
-        applyTimeDecay();
-        checkPayday();
-        renderAll();
-        saveState();
-      }
-
-      // Run initial setup ----------------------------------------------------
-      setupActions();
-      renderAll();
-      setInterval(gameLoop, 1000);
     </script>
   </body>
 </html>
