@@ -9,9 +9,24 @@
     <script>
       const BUILD_VERSION = "2024.06.09a";
     </script>
-    <link id="tailwind-cdn" rel="stylesheet" href="" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
     <script>
-      document.getElementById("tailwind-cdn").href = `https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css?v=${BUILD_VERSION}`;
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "Segoe UI", "system-ui", "-apple-system", "sans-serif"],
+            },
+          },
+        },
+        darkMode: "class",
+      };
     </script>
     <style>
       html,
@@ -345,6 +360,14 @@
       let decorGhost = null;
       let decorMenu = null;
       document.getElementById("build-version").textContent = BUILD_VERSION;
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .catch((err) => console.warn("Service worker registration failed", err));
+        });
+      }
 
       if (window.BEAR_FIREBASE_CONFIG) {
         initFirebase(window.BEAR_FIREBASE_CONFIG).catch((err) => console.warn("Firebase init failed", err));
