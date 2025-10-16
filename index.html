@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gabe &amp; Savannah · Team Bear Home</title>
+    <title>Gabe and Savannah's Bear Game</title>
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#f9a8d4" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,1122 +16,1748 @@
       body {
         font-family: "Nunito", "Baloo 2", ui-rounded, "Segoe UI", sans-serif;
       }
-      @keyframes bear-bob {
+      @keyframes pack-sparkle {
         0%,
         100% {
-          transform: translateY(0);
+          opacity: 0.2;
+          transform: scale(0.8) rotate(0deg);
         }
         50% {
-          transform: translateY(-8px);
+          opacity: 1;
+          transform: scale(1.08) rotate(12deg);
         }
       }
-      @keyframes bear-shake {
+      @keyframes heart-float {
         0% {
-          transform: translateX(0) rotate(0deg);
-        }
-        20% {
-          transform: translateX(-4px) rotate(-2deg);
-        }
-        40% {
-          transform: translateX(4px) rotate(2deg);
+          transform: translateY(0) scale(0.9);
+          opacity: 0.8;
         }
         60% {
-          transform: translateX(-4px) rotate(-1deg);
-        }
-        80% {
-          transform: translateX(4px) rotate(1deg);
-        }
-        100% {
-          transform: translateX(0) rotate(0deg);
-        }
-      }
-      @keyframes sparkle-twirl {
-        0% {
-          opacity: 0.2;
-          transform: scale(0.6) rotate(0deg);
-        }
-        50% {
-          opacity: 0.8;
-          transform: scale(1.1) rotate(30deg);
-        }
-        100% {
-          opacity: 0.2;
-          transform: scale(0.6) rotate(60deg);
-        }
-      }
-      .bear-avatar {
-        animation: bear-bob 2.6s ease-in-out infinite;
-      }
-      .bear-avatar.hungry {
-        animation: bear-bob 3s ease-in-out infinite, bear-shake 0.9s ease-in-out infinite;
-      }
-      .bear-avatar.sparkle::after {
-        content: "✨";
-        position: absolute;
-        font-size: 2rem;
-        top: 18%;
-        right: 18%;
-        animation: sparkle-twirl 2.3s ease-in-out infinite;
-      }
-      .action-button {
-        position: relative;
-        overflow: hidden;
-      }
-      .action-button.disabled::after {
-        content: "";
-        position: absolute;
-        inset: 6px;
-        border-radius: 9999px;
-        border: 2px solid rgba(255, 255, 255, 0.7);
-        border-top-color: rgba(244, 114, 182, 0.9);
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .stat-float {
-        animation: float-up 0.9s ease-out forwards;
-      }
-      @keyframes float-up {
-        0% {
-          opacity: 0;
-          transform: translateY(10px) scale(0.9);
-        }
-        40% {
           opacity: 1;
         }
         100% {
+          transform: translateY(-120px) scale(1.3);
           opacity: 0;
-          transform: translateY(-24px) scale(1.05);
         }
       }
-      .toast-enter {
-        animation: toast-slide 0.3s ease-out;
+      .heart-particle {
+        animation: heart-float 3.2s ease-in infinite;
       }
-      @keyframes toast-slide {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+      .card-flip {
+        perspective: 1000px;
+      }
+      .card-flip-inner {
+        transition: transform 0.8s;
+        transform-style: preserve-3d;
+      }
+      .card-flip:hover .card-flip-inner {
+        transform: rotateY(180deg);
+      }
+      .card-face {
+        backface-visibility: hidden;
+      }
+      .card-face-back {
+        transform: rotateY(180deg);
       }
     </style>
   </head>
   <body class="min-h-screen bg-gradient-to-br from-pink-100 via-amber-100 to-sky-100 text-slate-800">
     <div id="root"></div>
-    <div id="portal-root"></div>
 
     <script type="text/babel">
-      const { useState, useEffect, useMemo, useRef } = React;
+      const { useState, useEffect, useMemo } = React;
 
-      const STORAGE_KEY = "team_bear_home";
-      const DECAY_PER_MINUTE = {
-        hunger: 6,
-        energy: 4,
-        cleanliness: 5,
-        happiness: 3,
-      };
+      const STORAGE_KEY = "team_bear_evolution";
+      const PACK_COST = 150;
       const ACTION_DEFS = {
         feed: {
-          label: "Feed 🍯",
+          label: "Honey Feast 🍯",
           color: "from-amber-400 to-amber-500",
-          stats: { hunger: 25, happiness: 5 },
+          stats: { hunger: 28, happiness: 8 },
+          xp: 24,
+          coins: 6,
         },
         clean: {
-          label: "Clean 🫧",
+          label: "Bubble Spa 🫧",
           color: "from-sky-400 to-sky-500",
-          stats: { cleanliness: 25, happiness: 5 },
+          stats: { cleanliness: 30, happiness: 6 },
+          xp: 20,
+          coins: 4,
         },
         play: {
-          label: "Play 🎈",
+          label: "Playtime Parade 🎈",
           color: "from-rose-400 to-rose-500",
-          stats: { happiness: 22, energy: -6, cleanliness: -4 },
+          stats: { happiness: 26, energy: -8, cleanliness: -4 },
+          xp: 28,
+          coins: 8,
+        },
+        adventure: {
+          label: "Adventure Walk 🌲",
+          color: "from-emerald-400 to-emerald-500",
+          stats: { energy: -10, happiness: 20, cleanliness: -6 },
+          xp: 34,
+          coins: 14,
         },
         sleep: {
-          label: "Sleep 🌙",
+          label: "Snuggle Nap 🌙",
           color: "from-indigo-400 to-indigo-500",
-          stats: { energy: 28, hunger: -8 },
+          stats: { energy: 34, cleanliness: -5 },
+          xp: 18,
+          coins: 4,
         },
       };
-      const SHOP_ITEMS = [
+
+      const DECAY_PER_MINUTE = { hunger: 6, energy: 4, cleanliness: 5, happiness: 3 };
+
+      const RARITY_DATA = {
+        Common: { weight: 60, color: "bg-lime-200", border: "border-lime-400", essence: 6, multiplier: 1 },
+        Uncommon: { weight: 22, color: "bg-sky-200", border: "border-sky-400", essence: 10, multiplier: 1.2 },
+        Rare: { weight: 10, color: "bg-violet-200", border: "border-violet-400", essence: 16, multiplier: 1.5 },
+        Epic: { weight: 6, color: "bg-rose-200", border: "border-rose-400", essence: 24, multiplier: 1.8 },
+        Mythic: { weight: 2, color: "bg-amber-200", border: "border-amber-400", essence: 40, multiplier: 2.3 },
+      };
+
+      const CARD_LIBRARY = [
         {
-          id: "honey",
-          name: "Honey Jar",
-          description: "+25 hunger (store in pantry)",
-          cost: 35,
-          inventoryKey: "honey",
+          id: "honey-hugs",
+          name: "Honey Hugs",
+          rarity: "Common",
+          type: "boost",
+          effect: "+10 Happiness on next action",
+          power: { stat: "happiness", amount: 10 },
+          lore: "Warm embraces sweetened by love.",
         },
         {
-          id: "soap",
-          name: "Soft Soap",
-          description: "+25 cleanliness",
-          cost: 30,
-          inventoryKey: "soap",
+          id: "sparkle-snack",
+          name: "Sparkle Snack",
+          rarity: "Common",
+          type: "boost",
+          effect: "+8 Hunger fill",
+          power: { stat: "hunger", amount: 8 },
+          lore: "Tiny treats for growling tummies.",
         },
         {
-          id: "toy",
-          name: "Playful Toy",
-          description: "+25 happiness",
-          cost: 32,
-          inventoryKey: "toy",
+          id: "gentle-rain",
+          name: "Gentle Rain",
+          rarity: "Uncommon",
+          type: "cleanse",
+          effect: "+12 Cleanliness",
+          power: { stat: "cleanliness", amount: 12 },
+          lore: "Soft rain that polishes every paw.",
         },
         {
-          id: "adopt",
-          name: "Adopt New Bear",
-          description: "Invite another bear to the den",
-          cost: 200,
-          inventoryKey: null,
+          id: "moonlit-lullaby",
+          name: "Moonlit Lullaby",
+          rarity: "Uncommon",
+          type: "rest",
+          effect: "+10 Energy",
+          power: { stat: "energy", amount: 10 },
+          lore: "Whispers of stars tucking the bears in.",
+        },
+        {
+          id: "synchronized-giggles",
+          name: "Synchronized Giggles",
+          rarity: "Rare",
+          type: "xp",
+          effect: "1.25× XP for next 3 actions",
+          power: { xpMultiplier: 1.25, uses: 3 },
+          lore: "Shared laughs echo into growth.",
+        },
+        {
+          id: "evergreen-heart",
+          name: "Evergreen Heart",
+          rarity: "Rare",
+          type: "shield",
+          effect: "Slows stat decay for 20 minutes",
+          power: { decayReducer: 0.6, durationMinutes: 20 },
+          lore: "A vow to remain ever-bright.",
+        },
+        {
+          id: "aurora-crown",
+          name: "Aurora Crown",
+          rarity: "Epic",
+          type: "coins",
+          effect: "2× coin rewards for next job shift",
+          power: { coinMultiplier: 2, uses: 1 },
+          lore: "Royal glow of partnership.",
+        },
+        {
+          id: "guardian-roar",
+          name: "Guardian Roar",
+          rarity: "Epic",
+          type: "stats",
+          effect: "+12 to every stat instantly",
+          power: { allStats: 12 },
+          lore: "Let your love roar louder than worry.",
+        },
+        {
+          id: "soul-synch",
+          name: "Soul Synch",
+          rarity: "Mythic",
+          type: "legendary",
+          effect: "2× XP + coins for 5 actions",
+          power: { xpMultiplier: 2, coinMultiplier: 2, uses: 5 },
+          lore: "Two hearts evolving in perfect rhythm.",
+        },
+        {
+          id: "emberlight-trail",
+          name: "Emberlight Trail",
+          rarity: "Uncommon",
+          type: "quest",
+          effect: "Completing quests grants +20 coins",
+          power: { questBonus: 20, durationMinutes: 60 },
+          lore: "Guiding spark toward shared dreams.",
+        },
+        {
+          id: "artisan-paws",
+          name: "Artisan Paws",
+          rarity: "Rare",
+          type: "job",
+          effect: "Unlocks creative job tier",
+          power: { unlockJobRarity: "Rare" },
+          lore: "Crafting futures paw-in-paw.",
+        },
+        {
+          id: "starlit-bond",
+          name: "Starlit Bond",
+          rarity: "Epic",
+          type: "memory",
+          effect: "Quest memories earn +1 essence",
+          power: { memoryEssence: 1, durationMinutes: 1440 },
+          lore: "Constellations drawn from every date night.",
         },
       ];
 
-      const INITIAL_BEAR_NAMES = ["Sunny", "Clover", "Mochi", "River", "Aurora"];
-
-      const formatTime = (ms) => {
-        if (!ms || ms <= 0) return "00:00";
-        const totalSeconds = Math.ceil(ms / 1000);
-        const m = Math.floor(totalSeconds / 60)
-          .toString()
-          .padStart(2, "0");
-        const s = (totalSeconds % 60).toString().padStart(2, "0");
-        return `${m}:${s}`;
-      };
-
-      const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
-
-      const randomEmoji = () => {
-        const choices = ["🌟", "💖", "🍯", "🧸", "🌈", "🎉", "✨", "🪄"];
-        return choices[Math.floor(Math.random() * choices.length)];
-      };
-
-      const uuid = () =>
-        (window.crypto && window.crypto.randomUUID
-          ? window.crypto.randomUUID()
-          : Math.random().toString(36).slice(2));
-
-      const toastUI = (() => {
-        let pushHandler = null;
-        return {
-          setHandler(fn) {
-            pushHandler = fn;
+      const PASSIVE_BONUSES = {
+        "Gentle Healer": {
+          description: "+3 Happiness after every care action.",
+          apply(stats) {
+            return { ...stats, happiness: Math.min(100, stats.happiness + 3) };
           },
-          push(message, tone = "info") {
-            if (pushHandler) {
-              pushHandler({ id: uuid(), message, tone });
-            }
-          },
-        };
-      })();
-
-      const createBear = (name = "Sunny", id = `bear-${uuid()}`) => ({
-        id,
-        name,
-        ageMinutes: 0,
-        stage: "Cub",
-        stats: {
-          hunger: 85,
-          energy: 85,
-          cleanliness: 85,
-          happiness: 85,
         },
-        sleeping: false,
-        working: false,
-      });
+        "Honey Hoarder": {
+          description: "+3 coins after every action.",
+          coins: 3,
+        },
+        "Dreamy Dozer": {
+          description: "Sleep actions restore +8 extra energy.",
+          actionModifiers: { sleep: { energy: 8 } },
+        },
+        "Spark Runner": {
+          description: "Adventure gives +6 XP extra.",
+          actionXp: { adventure: 6 },
+        },
+      };
+      const JOB_DECK = {
+        Common: [
+          { id: "garden-helper", title: "Garden Helper", pay: 24, flavor: "Tending to the sunflower patch." },
+          { id: "story-hour", title: "Story Hour Host", pay: 30, flavor: "Reading to cubs with animated paws." },
+        ],
+        Uncommon: [
+          { id: "tea-alchemist", title: "Tea Alchemist", pay: 48, flavor: "Brewing calming blends for the den." },
+          { id: "songwriter", title: "Love Songwriter", pay: 56, flavor: "Writing duets of devotion." },
+        ],
+        Rare: [
+          { id: "glow-guild", title: "Glow Guild Artisans", pay: 78, flavor: "Crafting luminous keepsakes." },
+          { id: "council-guides", title: "Heart Council Guides", pay: 86, flavor: "Mentoring other bear couples." },
+        ],
+        Epic: [
+          { id: "aurora-navigators", title: "Aurora Navigators", pay: 120, flavor: "Charting radiant adventures." },
+        ],
+        Mythic: [
+          {
+            id: "legendary-keepers",
+            title: "Legendary Keepers",
+            pay: 180,
+            flavor: "Guarding sacred memories of Gabe and Savannah's Bear Game.",
+          },
+        ],
+      };
+
+      const ACHIEVEMENT_DEFS = [
+        { id: "level-3", name: "Rising Cubs", description: "Reach Level 3 together.", goal: 3, type: "level" },
+        { id: "level-7", name: "Evolution Experts", description: "Reach Level 7.", goal: 7, type: "level" },
+        {
+          id: "cards-10",
+          name: "Collector's Spark",
+          description: "Discover 10 unique cards.",
+          goal: 10,
+          type: "uniqueCards",
+        },
+        {
+          id: "essence-100",
+          name: "Essence Keepers",
+          description: "Accumulate 100 Bear Essence.",
+          goal: 100,
+          type: "essence",
+        },
+        {
+          id: "quests-5",
+          name: "Questing Duo",
+          description: "Complete 5 shared quests.",
+          goal: 5,
+          type: "questsCompleted",
+        },
+        {
+          id: "notes-12",
+          name: "Love Letter Legends",
+          description: "Post 12 love notes.",
+          goal: 12,
+          type: "loveNotes",
+        },
+      ];
+
+      const DAILY_VERSES = [
+        { ref: "1 Corinthians 16:14", text: "Let all that you do be done in love." },
+        { ref: "Ecclesiastes 4:12", text: "A cord of three strands is not quickly broken." },
+        {
+          ref: "Romans 12:10",
+          text: "Be devoted to one another in love. Honor one another above yourselves.",
+        },
+        { ref: "Psalm 143:8", text: "Let the morning bring me word of your unfailing love." },
+      ];
+
+      const DEFAULT_EVENTS = [
+        {
+          id: "gabe-birthday",
+          name: "Gabe's Birthday",
+          date: "05-04",
+          scene: "Gabe's joyful birthday flashback!",
+          theme: "bg-sky-200",
+          lastCelebratedYear: null,
+        },
+        {
+          id: "savannah-birthday",
+          name: "Savannah's Birthday",
+          date: "07-14",
+          scene: "Savannah's confetti surprise!",
+          theme: "bg-rose-200",
+          lastCelebratedYear: null,
+        },
+        {
+          id: "anniversary",
+          name: "Anniversary of Gabe and Savannah's Bear Game",
+          date: "10-02",
+          scene: "Anniversary aurora lights up the den.",
+          theme: "bg-amber-200",
+          lastCelebratedYear: null,
+        },
+      ];
 
       const DEFAULT_STATE = () => ({
-        bears: [createBear(INITIAL_BEAR_NAMES[0], `bear-1`)],
-        activeBearId: `bear-1`,
-        coins: 0,
-        inventory: { honey: 0, soap: 0, toy: 0 },
-        log: [],
-        streak: { count: 0, lastCheckInDate: null },
-        workLedger: {},
-        lastSaved: Date.now(),
+        version: 2,
+        coins: 420,
+        bearEssence: 12,
+        level: 1,
+        xp: 0,
+        xpHistory: [],
+        stats: { hunger: 80, energy: 76, cleanliness: 82, happiness: 94 },
         lastTick: Date.now(),
-        homeCode: null,
+        discoveredCards: [],
+        cardCollection: {},
+        activePowerUps: [],
+        job: {
+          stage: "Adult",
+          currentJobId: null,
+          lastShift: null,
+          jobHistory: [],
+        },
+        sharedQuests: [],
+        completedQuestCount: 0,
+        loveNotes: [],
+        den: {
+          themePrimary: "#f472b6",
+          themeSecondary: "#60a5fa",
+          denName: "Gabe and Savannah's Bear Den",
+          motto: "Growing closer, leveling up love.",
+          backgroundImage: "",
+        },
+        customBear: {
+          name: "Honey",
+          furColor: "#f5deb3",
+          accessory: "Flower Crown",
+          passiveBonus: "Gentle Healer",
+        },
+        achievements: ACHIEVEMENT_DEFS.map((ach) => ({
+          ...ach,
+          achieved: false,
+          progress: 0,
+          completedOn: null,
+        })),
+        packHistory: [],
+        dailyVerseIndex: 0,
+        events: DEFAULT_EVENTS,
+        prayerCornerMode: "cycle",
+        firebaseConfig: "",
+        firebaseSyncEnabled: false,
+        denMemories: [],
+        secretFlags: {
+          heartStorm: false,
+          hiddenMessageFound: false,
+        },
       });
 
-      const addLogEntry = (state, text, timestamp = Date.now()) => {
-        const entry = { id: uuid(), text, timestamp };
-        const newLog = [entry, ...state.log];
-        return newLog.slice(0, 80);
-      };
+      const clampStat = (value) => Math.max(0, Math.min(100, Math.round(value)));
+      const getXpForNextLevel = (level) => 120 + (level - 1) * (level - 1) * 80;
 
-      const determineStage = (ageMinutes) => {
-        if (ageMinutes < 60) return "Cub";
-        if (ageMinutes < 180) return "Teen";
-        return "Adult";
-      };
-
-      const computeStageProgress = (ageMinutes) => {
-        if (ageMinutes < 60) {
-          return { label: "To Teen", percent: Math.min(100, (ageMinutes / 60) * 100) };
-        }
-        if (ageMinutes < 180) {
-          return {
-            label: "To Adult",
-            percent: Math.min(100, ((ageMinutes - 60) / 120) * 100),
-          };
-        }
-        return { label: "Fully Grown", percent: 100 };
-      };
-
-      const qualifiesForWork = (bear) => {
-        const values = Object.values(bear.stats);
-        const minStat = Math.min(...values);
-        const avg = values.reduce((a, b) => a + b, 0) / values.length;
-        if (bear.stage !== "Adult") return { working: false, rate: 0, avg, min: minStat };
-        if (minStat < 50) return { working: false, rate: 0, avg, min: minStat };
-        return { working: true, rate: 2 + Math.floor(avg / 25), avg, min: minStat };
-      };
-
-      const applyTimeAdvance = (state, deltaMs, now = Date.now()) => {
-        if (deltaMs <= 0) {
-          return state;
-        }
-        const minutes = deltaMs / 60000;
-        let coinDelta = 0;
-        let logUpdates = state.log;
-        const workLedger = { ...state.workLedger };
-
-        const bears = state.bears.map((bear) => {
-          const stats = { ...bear.stats };
-          Object.keys(stats).forEach((key) => {
-            const decay = (DECAY_PER_MINUTE[key] || 0) * minutes;
-            stats[key] = clamp(stats[key] - decay);
-          });
-
-          const ageMinutes = bear.ageMinutes + minutes;
-          const stage = determineStage(ageMinutes);
-
-          const sickness = Object.values(stats).some((v) => v <= 0);
-          const workCheck = qualifiesForWork({ ...bear, stats, stage });
-          const ledger = workLedger[bear.id] || { progressMs: 0, nextPaycheckAt: null };
-
-          if (workCheck.working && !sickness) {
-            let progress = ledger.progressMs + deltaMs;
-            while (progress >= 60000) {
-              progress -= 60000;
-              coinDelta += workCheck.rate;
-              logUpdates = addLogEntry(
-                { ...state, log: logUpdates },
-                `${bear.name} completed a shift for ${workCheck.rate} coins!`
-              );
-            }
-            ledger.progressMs = progress;
-            ledger.nextPaycheckAt = now + Math.max(0, 60000 - progress);
+      const mergeDeep = (target, source) => {
+        if (typeof target !== "object" || target === null) return source;
+        const output = Array.isArray(target) ? [...target] : { ...target };
+        Object.keys(source || {}).forEach((key) => {
+          if (Array.isArray(source[key])) {
+            output[key] = source[key];
+          } else if (typeof source[key] === "object" && source[key] !== null) {
+            output[key] = mergeDeep(target[key] || {}, source[key]);
           } else {
-            ledger.progressMs = 0;
-            ledger.nextPaycheckAt = null;
+            output[key] = source[key];
           }
-          ledger.lastRate = workCheck.rate;
-          workLedger[bear.id] = ledger;
-
-          return {
-            ...bear,
-            stats,
-            ageMinutes,
-            stage,
-            working: workCheck.working && !sickness,
-            sleeping: bear.sleeping && stats.energy > 95 ? false : bear.sleeping,
-            sickness,
-          };
         });
-
-        const updated = {
-          ...state,
-          bears,
-          coins: state.coins + coinDelta,
-          workLedger,
-          log: logUpdates,
-          lastTick: now,
-          lastSaved: now,
-        };
-        return updated;
+        return output;
       };
 
-      const getPayCountdown = (state, bearId) => {
-        const ledger = state.workLedger[bearId];
-        if (!ledger || !ledger.nextPaycheckAt) return null;
-        return ledger.nextPaycheckAt - Date.now();
-      };
-
-      const ACTION_AUDIO = {
-        feed: 440,
-        clean: 520,
-        play: 660,
-        sleep: 350,
-      };
-
-      const useAudio = () => {
-        const ctxRef = useRef(null);
-        const ensureContext = () => {
-          if (!ctxRef.current) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            ctxRef.current = AudioContext ? new AudioContext() : null;
-          }
-          return ctxRef.current;
-        };
-        const playTone = (freq = 440, duration = 0.18) => {
-          const ctx = ensureContext();
-          if (!ctx) return;
-          const oscillator = ctx.createOscillator();
-          const gain = ctx.createGain();
-          oscillator.type = "sine";
-          oscillator.frequency.value = freq;
-          gain.gain.setValueAtTime(0.18, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-          oscillator.connect(gain).connect(ctx.destination);
-          oscillator.start();
-          oscillator.stop(ctx.currentTime + duration);
-        };
-        return { playTone };
-      };
-
-      const loadStoredHome = () => {
+      const loadState = () => {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return null;
-          return JSON.parse(raw);
+          if (!raw) return DEFAULT_STATE();
+          const parsed = JSON.parse(raw);
+          return mergeDeep(DEFAULT_STATE(), parsed);
         } catch (err) {
-          console.error("Failed to parse stored home", err);
-          return null;
+          console.warn("Failed to load state", err);
+          return DEFAULT_STATE();
         }
       };
 
-      const persistHome = (payload) => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      const saveState = (state) => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.warn("Failed to save state", err);
+        }
       };
 
-      const FirebaseContext = React.createContext({ firestore: null });
+      const weightedRandomRarity = () => {
+        const totalWeight = Object.values(RARITY_DATA).reduce((sum, r) => sum + r.weight, 0);
+        const roll = Math.random() * totalWeight;
+        let cumulative = 0;
+        for (const rarity of Object.keys(RARITY_DATA)) {
+          cumulative += RARITY_DATA[rarity].weight;
+          if (roll <= cumulative) return rarity;
+        }
+        return "Common";
+      };
 
-      const FirebaseProvider = ({ children, onHomeLoaded }) => {
-        const [firestore, setFirestore] = useState(null);
+      const generatePackCards = () => {
+        return Array.from({ length: 3 }).map(() => {
+          const rarity = weightedRandomRarity();
+          const pool = CARD_LIBRARY.filter((card) => card.rarity === rarity);
+          return pool[Math.floor(Math.random() * pool.length)] || CARD_LIBRARY[0];
+        });
+      };
 
-        useEffect(() => {
-          if (!window.BEARBUDDY_FIREBASE_CONFIG) return;
-          const waitForFirebase = () => {
-            if (window.firebase && window.firebase.initializeApp) {
-              const app = window.firebase.apps?.length
-                ? window.firebase.apps[0]
-                : window.firebase.initializeApp(window.BEARBUDDY_FIREBASE_CONFIG);
-              const db = window.firebase.firestore(app);
-              setFirestore(db);
-            } else {
-              setTimeout(waitForFirebase, 200);
-            }
+      const essenceForCard = (cardId) => {
+        const card = CARD_LIBRARY.find((c) => c.id === cardId);
+        if (!card) return 0;
+        return RARITY_DATA[card.rarity]?.essence || 4;
+      };
+
+      const highestRarityUnlocked = (data) => {
+        const discovered = data.discoveredCards.map((id) => CARD_LIBRARY.find((c) => c.id === id)?.rarity);
+        const order = ["Common", "Uncommon", "Rare", "Epic", "Mythic"];
+        let maxIndex = 0;
+        discovered.forEach((rarity) => {
+          const idx = order.indexOf(rarity);
+          if (idx > maxIndex) maxIndex = idx;
+        });
+        return order[maxIndex];
+      };
+
+      const rarityToIndex = (rarity) => ["Common", "Uncommon", "Rare", "Epic", "Mythic"].indexOf(rarity);
+      const evaluateAchievements = (state) => {
+        const uniqueCards = state.discoveredCards.length;
+        const values = {
+          level: state.level,
+          uniqueCards,
+          essence: state.bearEssence,
+          questsCompleted: state.completedQuestCount,
+          loveNotes: state.loveNotes.length,
+        };
+
+        return state.achievements.map((ach) => {
+          const val = values[ach.type] || 0;
+          const progress = Math.min(ach.goal, val);
+          const achieved = progress >= ach.goal;
+          return {
+            ...ach,
+            progress,
+            achieved,
+            completedOn: achieved && !ach.completedOn ? Date.now() : ach.completedOn,
           };
-          waitForFirebase();
-        }, []);
-
-        useEffect(() => {
-          if (firestore) {
-            onHomeLoaded?.(true);
-          }
-        }, [firestore, onHomeLoaded]);
-
-        return <FirebaseContext.Provider value={{ firestore }}>{children}</FirebaseContext.Provider>;
+        });
       };
 
-      const useFirebase = () => React.useContext(FirebaseContext);
-
-      const useRemoteSync = ({ gameState, setGameState, homeCode }) => {
-        const { firestore } = useFirebase();
-        const lastSyncedRef = useRef(0);
-
-        useEffect(() => {
-          if (!firestore || !homeCode) return;
-          const docRef = firestore.collection("homes").doc(homeCode);
-          let unsub = docRef.onSnapshot((snap) => {
-            if (!snap.exists) return;
-            const data = snap.data();
-            if (!data || !data.state) return;
-            const remoteState = data.state;
-            if (!remoteState.lastSaved) return;
-            if (!gameState || remoteState.lastSaved > gameState.lastSaved) {
-              setGameState((prev) => ({ ...prev, ...remoteState }));
-            }
-          });
-          return () => unsub && unsub();
-        }, [firestore, homeCode]);
-
-        useEffect(() => {
-          if (!firestore || !homeCode || !gameState) return;
-          const now = Date.now();
-          if (now - lastSyncedRef.current < 4000) return;
-          lastSyncedRef.current = now;
-          const docRef = firestore.collection("homes").doc(homeCode);
-          docRef.set({
-            state: gameState,
-            lastSaved: gameState.lastSaved,
-          });
-        }, [firestore, homeCode, gameState]);
+      const applyDecay = (state) => {
+        const now = Date.now();
+        const minutesPassed = Math.max(0, (now - (state.lastTick || now)) / 60000);
+        if (minutesPassed < 0.1) return state;
+        const newStats = { ...state.stats };
+        Object.keys(newStats).forEach((key) => {
+          const baseDecay = DECAY_PER_MINUTE[key] || 0;
+          let decay = baseDecay * minutesPassed;
+          const activeDecayReducer = state.activePowerUps.find(
+            (p) => p.power.decayReducer && (!p.expires || p.expires > now)
+          );
+          if (activeDecayReducer) decay *= activeDecayReducer.power.decayReducer;
+          newStats[key] = clampStat(newStats[key] - decay);
+        });
+        return {
+          ...state,
+          stats: newStats,
+          lastTick: now,
+          activePowerUps: state.activePowerUps.filter(
+            (p) => !p.expires || p.expires > now || (p.uses && p.uses > 0)
+          ),
+        };
       };
 
-      const FloatingIndicators = ({ indicators }) => (
-        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
-          <div className="relative w-full max-w-xl mx-auto">
-            {indicators.map((indicator) => (
-              <div
-                key={indicator.id}
-                className="stat-float absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-emerald-600"
-                style={{ top: indicator.offset }}
-              >
-                {indicator.text}
-              </div>
-            ))}
+      const detectEasterEggs = (text, state) => {
+        const lower = text.toLowerCase();
+        const updates = { ...state.secretFlags };
+        if (!updates.heartStorm && (lower.includes("forever") || lower.includes("bear hug"))) {
+          updates.heartStorm = true;
+        }
+        if (!updates.hiddenMessageFound && lower.includes("gabe and savannah's bear game")) {
+          updates.hiddenMessageFound = true;
+        }
+        return updates;
+      };
+
+      const formatDate = (dateStr) => {
+        try {
+          return new Date(dateStr).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        } catch (err) {
+          return dateStr;
+        }
+      };
+
+      const formatMMDD = (date) => {
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+        return `${mm}-${dd}`;
+      };
+
+      const eventShouldTrigger = (event, today) => {
+        if (!event?.date) return false;
+        const todayKey = formatMMDD(today);
+        if (todayKey !== event.date) return false;
+        if (event.lastCelebratedYear === today.getFullYear()) return false;
+        return true;
+      };
+
+      const StatBar = ({ label, value, color }) => (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span>{label}</span>
+            <span>{value}%</span>
+          </div>
+          <div className="h-3 rounded-full bg-slate-200">
+            <div className={`h-3 rounded-full transition-all duration-500 ${color}`} style={{ width: `${value}%` }}></div>
           </div>
         </div>
       );
 
-      const ToastStack = ({ toasts, dismiss }) => (
-        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`toast-enter rounded-2xl px-4 py-3 shadow-lg backdrop-blur bg-white/90 border flex items-center gap-2 ${
-                toast.tone === "error" ? "border-rose-300 text-rose-500" : "border-emerald-300 text-emerald-600"
-              }`}
-            >
-              <span>{toast.message}</span>
+      const AchievementBadge = ({ achievement }) => {
+        const complete = achievement.achieved;
+        return (
+          <div
+            className={`rounded-xl border p-4 shadow-sm transition ${
+              complete ? "bg-white border-emerald-300" : "bg-slate-50 border-slate-200"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-full text-xl ${
+                  complete ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"
+                }`}
+              >
+                {complete ? "🏆" : "✨"}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-slate-700">{achievement.name}</div>
+                <p className="text-sm text-slate-500">{achievement.description}</p>
+                <div className="mt-2 h-2 w-full rounded-full bg-slate-200">
+                  <div
+                    className={`h-2 rounded-full ${complete ? "bg-emerald-400" : "bg-rose-300"}`}
+                    style={{ width: `${(achievement.progress / achievement.goal) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs font-medium text-slate-500">
+              {achievement.progress}/{achievement.goal}
+            </div>
+          </div>
+        );
+      };
+      const CardPill = ({ card, count, onActivate }) => (
+        <div
+          className={`card-flip relative rounded-xl border-2 p-3 text-sm shadow-md ${RARITY_DATA[card.rarity].border} ${RARITY_DATA[card.rarity].color}`}
+        >
+          <div className="card-flip-inner">
+            <div className="card-face">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-slate-600">{card.rarity}</div>
+                  <div className="text-base font-bold text-slate-700">{card.name}</div>
+                </div>
+                <span className="text-xl">🐻</span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">{card.effect}</p>
+              <div className="mt-1 text-xs text-slate-500">{card.lore}</div>
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 font-semibold text-slate-600">
+                  {count} owned
+                </span>
+                <button
+                  className="rounded-full bg-rose-400 px-2 py-0.5 text-xs font-semibold text-white shadow"
+                  onClick={() => onActivate(card)}
+                >
+                  Power Up
+                </button>
+              </div>
+            </div>
+            <div className="card-face card-face-back absolute inset-0 rounded-xl bg-white/90 p-3">
+              <p className="text-xs text-slate-600">
+                Power detail: {card.power?.uses ? `${card.power.uses} uses` : "Instant"}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">Rarity multiplier ×{RARITY_DATA[card.rarity].multiplier}</p>
+              <p className="mt-2 text-xs text-slate-500">Essence value {essenceForCard(card.id)}</p>
+            </div>
+          </div>
+        </div>
+      );
+
+      const LoveNoteCard = ({ note, onUpdate }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [draft, setDraft] = useState(note.text);
+        return (
+          <div className="rounded-2xl border border-pink-200 bg-white/80 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-rose-500">{note.author}</div>
+                <div className="text-xs text-slate-400">{formatDate(note.createdAt)}</div>
+              </div>
               <button
-                className="text-xs text-slate-500 hover:text-slate-700"
-                onClick={() => dismiss(toast.id)}
+                className="text-xs font-semibold text-rose-500 hover:text-rose-600"
+                onClick={() => setIsEditing((prev) => !prev)}
+              >
+                {isEditing ? "Cancel" : "Edit"}
+              </button>
+            </div>
+            {isEditing ? (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  className="w-full rounded-xl border border-rose-200 bg-rose-50/70 p-2 text-sm"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+                <button
+                  className="rounded-full bg-rose-400 px-3 py-1 text-xs font-semibold text-white"
+                  onClick={() => {
+                    onUpdate(draft);
+                    setIsEditing(false);
+                  }}
+                >
+                  Save Love Note
+                </button>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">{note.text}</p>
+            )}
+            {note.memory && (
+              <div className="mt-3 rounded-xl bg-rose-50 p-2 text-xs text-rose-500">
+                Memory: {note.memory}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const QuestCard = ({ quest, onComplete }) => {
+        const [memoryText, setMemoryText] = useState("");
+        const [photoUrl, setPhotoUrl] = useState("");
+        useEffect(() => {
+          if (quest.completed) {
+            setMemoryText(quest.memory?.text || "");
+            setPhotoUrl(quest.memory?.photo || "");
+          }
+        }, [quest]);
+        return (
+          <div
+            className={`rounded-2xl border p-4 shadow-sm ${
+              quest.completed ? "bg-emerald-50 border-emerald-200" : "bg-white/80 border-slate-200"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-slate-700">{quest.title}</div>
+                <p className="text-xs text-slate-500">{quest.description}</p>
+              </div>
+              <span className="text-xs font-semibold text-rose-400">
+                {quest.rewardType} {quest.rewardAmount}
+              </span>
+            </div>
+            <div className="mt-3 text-xs text-slate-500">Created {formatDate(quest.createdAt)}</div>
+            {quest.completed ? (
+              <div className="mt-3 space-y-2 text-sm text-emerald-600">
+                <div>Completed {formatDate(quest.completedAt)}</div>
+                {quest.memory?.text && (
+                  <div className="rounded-xl bg-white/70 p-2 text-emerald-500">Memory: {quest.memory.text}</div>
+                )}
+                {quest.memory?.photo && (
+                  <img src={quest.memory.photo} alt="Quest memory" className="h-32 w-full rounded-xl object-cover" />
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2 text-xs">
+                <textarea
+                  className="w-full rounded-xl border border-amber-200 bg-amber-50/60 p-2 text-xs"
+                  placeholder="Add memory text (optional)"
+                  value={memoryText}
+                  onChange={(e) => setMemoryText(e.target.value)}
+                />
+                <input
+                  className="w-full rounded-xl border border-amber-200 bg-white/80 p-2 text-xs"
+                  placeholder="Photo URL (optional)"
+                  value={photoUrl}
+                  onChange={(e) => setPhotoUrl(e.target.value)}
+                />
+                <button
+                  className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-white shadow"
+                  onClick={() => onComplete(quest.id, { text: memoryText, photo: photoUrl })}
+                >
+                  Complete Quest
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      };
+      const App = () => {
+        const [state, setState] = useState(() => applyDecay(loadState()));
+        const [ui, setUi] = useState({
+          toast: null,
+          packModal: null,
+          eventBanner: null,
+          heartAnimation: false,
+        });
+        const [verse, setVerse] = useState(() => DAILY_VERSES[loadState().dailyVerseIndex || 0]);
+
+        useEffect(() => {
+          const tick = setInterval(() => {
+            setState((prev) => applyDecay(prev));
+          }, 60000);
+          return () => clearInterval(tick);
+        }, []);
+
+        useEffect(() => {
+          saveState(state);
+        }, [state]);
+
+        useEffect(() => {
+          const today = new Date();
+          const triggeredEvent = state.events.find((event) => eventShouldTrigger(event, today));
+          if (triggeredEvent) {
+            setUi((prev) => ({
+              ...prev,
+              eventBanner: { ...triggeredEvent, year: today.getFullYear() },
+            }));
+            setState((prev) => ({
+              ...prev,
+              events: prev.events.map((event) =>
+                event.id === triggeredEvent.id ? { ...event, lastCelebratedYear: today.getFullYear() } : event
+              ),
+              coins: prev.coins + 100,
+              bearEssence: prev.bearEssence + 10,
+            }));
+          }
+        }, [state.events]);
+
+        useEffect(() => {
+          setVerse(DAILY_VERSES[state.dailyVerseIndex % DAILY_VERSES.length]);
+        }, [state.dailyVerseIndex]);
+
+        const updateState = (updater) => {
+          setState((prev) => {
+            const next = typeof updater === "function" ? updater(prev) : updater;
+            next.achievements = evaluateAchievements(next);
+            return next;
+          });
+        };
+
+        const themeStyle = useMemo(
+          () => ({
+            backgroundImage: state.den.backgroundImage ? `url(${state.den.backgroundImage})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            '--team-primary': state.den.themePrimary,
+            '--team-secondary': state.den.themeSecondary,
+          }),
+          [state.den.backgroundImage, state.den.themePrimary, state.den.themeSecondary]
+        );
+
+        const levelProgress = useMemo(() => {
+          const needed = getXpForNextLevel(state.level);
+          return Math.min(100, Math.round((state.xp / needed) * 100));
+        }, [state.level, state.xp]);
+
+        const highestJobRarity = useMemo(() => {
+          const passiveUnlock = PASSIVE_BONUSES[state.customBear.passiveBonus]?.unlockJobRarity;
+          const highestFromCards = highestRarityUnlocked(state);
+          if (!passiveUnlock) return highestFromCards;
+          return rarityToIndex(passiveUnlock) > rarityToIndex(highestFromCards) ? passiveUnlock : highestFromCards;
+        }, [state.discoveredCards, state.customBear.passiveBonus]);
+
+        const availableJobs = useMemo(() => {
+          const order = ["Common", "Uncommon", "Rare", "Epic", "Mythic"];
+          const unlockedIndex = order.indexOf(highestJobRarity);
+          return order
+            .slice(0, unlockedIndex + 1)
+            .flatMap((rarity) => JOB_DECK[rarity].map((job) => ({ ...job, rarity })));
+        }, [highestJobRarity]);
+
+        const addToast = (message, type = "info") => {
+          setUi((prev) => ({ ...prev, toast: { message, type, timestamp: Date.now() } }));
+          setTimeout(() => setUi((prev) => ({ ...prev, toast: null })), 4200);
+        };
+        const applyAction = (key) => {
+          const action = ACTION_DEFS[key];
+          if (!action) return;
+          updateState((prev) => {
+            let stats = { ...prev.stats };
+            Object.keys(action.stats || {}).forEach((stat) => {
+              stats[stat] = clampStat(stats[stat] + action.stats[stat]);
+            });
+
+            const passive = PASSIVE_BONUSES[prev.customBear.passiveBonus];
+            if (passive?.apply) {
+              stats = passive.apply(stats);
+            }
+            if (passive?.actionModifiers?.[key]) {
+              Object.entries(passive.actionModifiers[key]).forEach(([stat, amount]) => {
+                stats[stat] = clampStat(stats[stat] + amount);
+              });
+            }
+
+            let xpGain = action.xp || 0;
+            if (passive?.actionXp?.[key]) xpGain += passive.actionXp[key];
+            let coinGain = action.coins || 0;
+            if (passive?.coins) coinGain += passive.coins;
+
+            const now = Date.now();
+            const activeBoosts = prev.activePowerUps.filter((p) => !p.expires || p.expires > now);
+            activeBoosts.forEach((boost) => {
+              if (boost.power?.xpMultiplier) xpGain *= boost.power.xpMultiplier;
+              if (boost.power?.coinMultiplier) coinGain *= boost.power.coinMultiplier;
+              if (boost.power?.stat) {
+                stats[boost.power.stat] = clampStat(stats[boost.power.stat] + boost.power.amount);
+              }
+              if (boost.power?.allStats) {
+                Object.keys(stats).forEach((stat) => {
+                  stats[stat] = clampStat(stats[stat] + boost.power.allStats);
+                });
+              }
+              if (boost.power?.uses) {
+                boost.uses = (boost.uses || boost.power.uses) - 1;
+              }
+            });
+
+            const filteredBoosts = activeBoosts
+              .filter((boost) => !boost.power?.uses || boost.uses > 0)
+              .map((boost) => ({ ...boost }));
+
+            let xp = prev.xp + xpGain;
+            let level = prev.level;
+            let coins = prev.coins + Math.round(coinGain);
+            const xpHistory = [...prev.xpHistory];
+            let leveledUp = false;
+            while (xp >= getXpForNextLevel(level)) {
+              xp -= getXpForNextLevel(level);
+              level += 1;
+              leveledUp = true;
+              coins += 60;
+            }
+            if (leveledUp) {
+              xpHistory.push({ level, time: now });
+              addToast(`Level up! You reached level ${level}! 🎉`, "success");
+            }
+
+            return {
+              ...prev,
+              stats,
+              xp,
+              level,
+              coins,
+              activePowerUps: filteredBoosts,
+              lastTick: now,
+            };
+          });
+        };
+
+        const openPack = () => {
+          if (state.coins < PACK_COST) {
+            addToast("Not enough coins for a card pack yet!", "warn");
+            return;
+          }
+          const cards = generatePackCards();
+          let essenceGain = 0;
+          const newlyDiscovered = [];
+          updateState((prev) => {
+            const collection = { ...prev.cardCollection };
+            const discovered = new Set(prev.discoveredCards);
+            cards.forEach((card) => {
+              const existing = collection[card.id] || { count: 0, firstDiscovered: Date.now() };
+              existing.count += 1;
+              if (existing.count > 1) {
+                essenceGain += essenceForCard(card.id);
+              }
+              collection[card.id] = existing;
+              if (!discovered.has(card.id)) {
+                discovered.add(card.id);
+                newlyDiscovered.push(card.id);
+              }
+            });
+            return {
+              ...prev,
+              coins: prev.coins - PACK_COST,
+              bearEssence: prev.bearEssence + essenceGain,
+              cardCollection: collection,
+              discoveredCards: Array.from(discovered),
+              packHistory: [
+                { id: `pack-${Date.now()}`, cards: cards.map((c) => c.id), time: Date.now(), essenceGain },
+                ...prev.packHistory.slice(0, 19),
+              ],
+            };
+          });
+          setUi((prev) => ({
+            ...prev,
+            packModal: { cards, essenceGain, newlyDiscovered },
+          }));
+        };
+
+        const activatePowerUp = (card) => {
+          if (!state.cardCollection[card.id]) {
+            addToast("Collect the card first!", "warn");
+            return;
+          }
+          const now = Date.now();
+          const duration = card.power?.durationMinutes ? card.power.durationMinutes * 60000 : null;
+          updateState((prev) => ({
+            ...prev,
+            activePowerUps: [
+              ...prev.activePowerUps,
+              {
+                cardId: card.id,
+                power: card.power,
+                activatedAt: now,
+                uses: card.power?.uses || null,
+                expires: duration ? now + duration : null,
+              },
+            ],
+          }));
+          addToast(`${card.name} power activated!`, "success");
+        };
+        const handleBearCustomization = (field, value) => {
+          updateState((prev) => ({
+            ...prev,
+            customBear: { ...prev.customBear, [field]: value },
+          }));
+        };
+
+        const handleDenCustomization = (field, value) => {
+          updateState((prev) => ({
+            ...prev,
+            den: { ...prev.den, [field]: value },
+          }));
+        };
+
+        const handleBackgroundUpload = (file) => {
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            handleDenCustomization("backgroundImage", e.target.result);
+          };
+          reader.readAsDataURL(file);
+        };
+
+        const addQuest = (quest) => {
+          updateState((prev) => ({
+            ...prev,
+            sharedQuests: [
+              ...prev.sharedQuests,
+              {
+                ...quest,
+                id: `quest-${Date.now()}`,
+                createdAt: Date.now(),
+                completed: false,
+                memory: null,
+              },
+            ],
+          }));
+        };
+
+        const completeQuest = (questId, memory) => {
+          updateState((prev) => {
+            const quests = prev.sharedQuests.map((quest) =>
+              quest.id === questId ? { ...quest, completed: true, completedAt: Date.now(), memory } : quest
+            );
+            const quest = prev.sharedQuests.find((q) => q.id === questId);
+            let coins = prev.coins;
+            let essence = prev.bearEssence;
+            if (quest?.rewardType === "coins") coins += quest.rewardAmount || 40;
+            if (quest?.rewardType === "essence") essence += quest.rewardAmount || 6;
+            if (quest?.rewardType === "memory") essence += 1;
+            if (prev.activePowerUps.some((p) => p.power?.questBonus && (!p.expires || p.expires > Date.now()))) {
+              coins += 20;
+            }
+            const memoryEntry = memory?.text
+              ? [
+                  {
+                    id: `memory-${Date.now()}`,
+                    text: memory.text,
+                    photo: memory.photo,
+                    createdAt: Date.now(),
+                    questTitle: quest?.title,
+                  },
+                  ...prev.denMemories,
+                ]
+              : prev.denMemories;
+            return {
+              ...prev,
+              sharedQuests: quests,
+              coins,
+              bearEssence: essence,
+              denMemories: memoryEntry,
+              completedQuestCount: prev.completedQuestCount + 1,
+            };
+          });
+          addToast("Quest completed together!", "success");
+        };
+
+        const addLoveNote = (note) => {
+          updateState((prev) => ({
+            ...prev,
+            loveNotes: [
+              {
+                id: `note-${Date.now()}`,
+                createdAt: Date.now(),
+                ...note,
+              },
+              ...prev.loveNotes,
+            ],
+            secretFlags: detectEasterEggs(note.text, prev),
+          }));
+          if (note.text.toLowerCase().includes("heart")) {
+            setUi((prev) => ({ ...prev, heartAnimation: true }));
+            setTimeout(() => setUi((prev) => ({ ...prev, heartAnimation: false })), 3200);
+          }
+        };
+
+        const updateLoveNote = (noteId, text) => {
+          updateState((prev) => ({
+            ...prev,
+            loveNotes: prev.loveNotes.map((note) =>
+              note.id === noteId ? { ...note, text, updatedAt: Date.now() } : note
+            ),
+            secretFlags: detectEasterEggs(text, prev),
+          }));
+        };
+
+        const assignJob = (jobId) => {
+          updateState((prev) => ({
+            ...prev,
+            job: { ...prev.job, currentJobId: jobId },
+          }));
+        };
+
+        const performShift = () => {
+          const job = availableJobs.find((job) => job.id === state.job.currentJobId);
+          if (!job) {
+            addToast("Pick a job first!", "warn");
+            return;
+          }
+          const now = Date.now();
+          updateState((prev) => {
+            let pay = job.pay;
+            const activeBoost = prev.activePowerUps.find((p) => p.power?.coinMultiplier && (!p.expires || p.expires > now));
+            if (activeBoost) {
+              pay *= activeBoost.power.coinMultiplier;
+              if (activeBoost.power?.uses) activeBoost.uses -= 1;
+            }
+            const rarityBonus = RARITY_DATA[job.rarity]?.multiplier || 1;
+            pay = Math.round(pay * rarityBonus);
+            return {
+              ...prev,
+              coins: prev.coins + pay,
+              job: {
+                ...prev.job,
+                lastShift: now,
+                jobHistory: [
+                  { id: `shift-${now}`, jobId: job.id, pay, time: now },
+                  ...prev.job.jobHistory.slice(0, 14),
+                ],
+              },
+            };
+          });
+          addToast(`Shift complete! Earned ${job.pay}× bonus coins!`, "success");
+        };
+
+        const cycleVerse = () => {
+          const nextIndex = (state.dailyVerseIndex + 1) % DAILY_VERSES.length;
+          setState((prev) => ({
+            ...prev,
+            dailyVerseIndex: nextIndex,
+          }));
+        };
+
+        const addEvent = (event) => {
+          updateState((prev) => ({
+            ...prev,
+            events: [
+              ...prev.events,
+              { ...event, id: `event-${Date.now()}`, lastCelebratedYear: null },
+            ],
+          }));
+        };
+
+        const updateFirebaseConfig = (value) => {
+          updateState((prev) => ({
+            ...prev,
+            firebaseConfig: value,
+          }));
+        };
+        const hearts = ui.heartAnimation
+          ? Array.from({ length: 12 }).map((_, index) => (
+              <span
+                key={index}
+                className="heart-particle absolute text-rose-400"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 1.6}s`,
+                  fontSize: `${Math.random() * 16 + 16}px`,
+                }}
+              >
+                ❤
+              </span>
+            ))
+          : null;
+
+        const packModal = ui.packModal ? (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 backdrop-blur">
+            <div className="relative w-full max-w-3xl rounded-3xl bg-white/90 p-6 shadow-2xl">
+              <button
+                className="absolute right-5 top-5 text-sm font-semibold text-slate-400 hover:text-slate-600"
+                onClick={() => setUi((prev) => ({ ...prev, packModal: null }))}
               >
                 Close
               </button>
-            </div>
-          ))}
-        </div>
-      );
-
-      const StageProgress = ({ bear }) => {
-        const { label, percent } = computeStageProgress(bear.ageMinutes);
-        return (
-          <div>
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>{label}</span>
-              <span>{percent.toFixed(0)}%</span>
-            </div>
-            <div className="h-2 bg-white/40 rounded-full mt-1 overflow-hidden">
-              <div className="h-full bg-emerald-400" style={{ width: `${percent}%` }}></div>
-            </div>
-          </div>
-        );
-      };
-
-      const StatBar = ({ label, value }) => {
-        const color = value > 70 ? "bg-emerald-400" : value > 40 ? "bg-amber-400" : "bg-rose-400";
-        return (
-          <div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold">{label}</span>
-              <span>{Math.round(value)}</span>
-            </div>
-            <div className="h-3 bg-white/40 rounded-full overflow-hidden">
-              <div className={`h-full ${color}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }}></div>
-            </div>
-          </div>
-        );
-      };
-
-      const InventoryPanel = ({ inventory, onUseItem, disabled }) => {
-        const items = [
-          { key: "honey", label: "Honey", description: "+25 hunger" },
-          { key: "soap", label: "Soap", description: "+25 cleanliness" },
-          { key: "toy", label: "Toy", description: "+25 happiness" },
-        ];
-        return (
-          <div className="bg-white/70 rounded-3xl p-4 shadow-inner space-y-3">
-            <h3 className="font-semibold flex items-center gap-2 text-lg">Pantry &amp; Care Kit 🍱</h3>
-            {items.map((item) => (
-              <div key={item.key} className="flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-semibold">{item.label}</p>
-                  <p className="text-slate-500">{item.description}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-500 font-bold">{inventory[item.key] ?? 0}</span>
-                  <button
-                    onClick={() => onUseItem(item.key)}
-                    disabled={disabled || (inventory[item.key] ?? 0) === 0}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                      inventory[item.key] > 0
-                        ? "bg-emerald-400 text-white hover:bg-emerald-500"
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                    }`}
-                  >
-                    Use
-                  </button>
-                </div>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-slate-700">Pack Opening!</h2>
+                <p className="text-sm text-slate-500">Collectible cards bloom before your eyes.</p>
               </div>
-            ))}
-          </div>
-        );
-      };
-
-      const ShopPanel = ({ open, onClose, coins, onPurchase }) => {
-        return (
-          <div
-            className={`fixed inset-0 z-40 transition ${open ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <div
-              className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity ${
-                open ? "opacity-100" : "opacity-0"
-              }`}
-              onClick={onClose}
-            ></div>
-            <div
-              className={`absolute right-0 top-0 h-full w-full sm:w-96 bg-gradient-to-b from-white/95 to-white/80 p-6 shadow-xl transition-transform duration-300 ${
-                open ? "translate-x-0" : "translate-x-full"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">Den Boutique</h2>
-                <button className="text-sm text-slate-500" onClick={onClose}>
-                  Close
-                </button>
-              </div>
-              <p className="text-sm text-slate-500 mb-4">
-                Spend wisely! Items head straight into your shared pantry or invite new friends.
-              </p>
-              <div className="space-y-4">
-                {SHOP_ITEMS.map((item) => {
-                  const affordable = coins >= item.cost;
-                  return (
-                    <div key={item.id} className="p-4 rounded-3xl bg-white/90 shadow border border-white/60">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-lg">{item.name}</p>
-                          <p className="text-sm text-slate-500">{item.description}</p>
-                        </div>
-                        <span className="text-amber-500 font-bold">{item.cost} 🪙</span>
-                      </div>
-                      <button
-                        onClick={() => onPurchase(item)}
-                        disabled={!affordable}
-                        className={`mt-3 w-full py-2 rounded-2xl font-semibold transition ${
-                          affordable
-                            ? "bg-rose-400 hover:bg-rose-500 text-white"
-                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                        }`}
-                      >
-                        Add to Cart
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const ActionButtons = ({ onAction, cooldowns, disabled }) => (
-        <div className="grid grid-cols-2 gap-3">
-          {Object.entries(ACTION_DEFS).map(([key, action]) => {
-            const isCooling = cooldowns[key];
-            return (
-              <button
-                key={key}
-                onClick={() => onAction(key)}
-                disabled={disabled || isCooling}
-                className={`action-button rounded-3xl bg-gradient-to-br ${action.color} px-4 py-3 font-semibold text-white shadow-lg transition hover:shadow-xl ${
-                  disabled || isCooling ? "opacity-60 cursor-not-allowed disabled" : ""
-                }`}
-              >
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-      );
-
-      const ActivityLog = ({ entries }) => (
-        <div className="bg-white/70 rounded-3xl shadow-xl p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold">Activity Log</h2>
-            <span className="text-sm text-slate-500">Latest updates from the den</span>
-          </div>
-          <ul className="space-y-2 max-h-64 overflow-y-auto pr-1 text-sm">
-            {entries.length === 0 && (
-              <li className="text-slate-400">Your log will appear here as you care for the bears.</li>
-            )}
-            {entries.map((entry) => (
-              <li key={entry.id} className="bg-white/80 rounded-2xl px-3 py-2 shadow border border-white/60">
-                <div className="text-slate-500 text-xs">
-                  {new Date(entry.timestamp).toLocaleString()}
-                </div>
-                <div>{entry.text}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-
-      const BearCarousel = ({ bears, activeBearId, onSelect }) => {
-        if (bears.length <= 1) return null;
-        const currentIndex = bears.findIndex((bear) => bear.id === activeBearId);
-        const prevBear = bears[(currentIndex - 1 + bears.length) % bears.length];
-        const nextBear = bears[(currentIndex + 1) % bears.length];
-        return (
-          <div className="flex items-center justify-between bg-white/60 rounded-full px-4 py-2 text-sm text-slate-600">
-            <button onClick={() => onSelect(prevBear.id)} className="hover:text-rose-500">
-              ← {prevBear.name}
-            </button>
-            <span>Switch Bear</span>
-            <button onClick={() => onSelect(nextBear.id)} className="hover:text-emerald-500">
-              {nextBear.name} →
-            </button>
-          </div>
-        );
-      };
-
-      const CheckInPanel = ({ streak, onCheckIn, disabled }) => {
-        const today = new Date().toLocaleDateString();
-        const alreadyChecked = streak.lastCheckInDate === today;
-        return (
-          <div className="bg-white/70 rounded-3xl p-4 shadow-inner">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg">Daily Team Check-In</h3>
-                <p className="text-sm text-slate-500">
-                  Keep your streak alive for bonus coins! {alreadyChecked ? "Already checked in today." : ""}
-                </p>
-              </div>
-              <span className="font-bold text-emerald-500">{streak.count} day streak</span>
-            </div>
-            <button
-              onClick={onCheckIn}
-              disabled={disabled || alreadyChecked}
-              className={`mt-3 w-full py-2 rounded-2xl font-semibold transition ${
-                alreadyChecked
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                  : "bg-emerald-400 hover:bg-emerald-500 text-white"
-              }`}
-            >
-              {alreadyChecked ? "Come back tomorrow" : "Check In +10 coins"}
-            </button>
-          </div>
-        );
-      };
-
-      const HomeGate = ({ onCreate, onJoin, busy }) => {
-        const [code, setCode] = useState("");
-        return (
-          <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100 text-slate-700 p-6">
-            <div className="bg-white/80 rounded-3xl shadow-2xl p-8 max-w-md w-full space-y-5 text-center">
-              <h1 className="text-3xl font-black text-rose-500">Team Bear Homes</h1>
-              <p className="text-sm text-slate-500">
-                Enter an existing home code or create a fresh den to sync across devices.
-              </p>
-              <div className="space-y-3">
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.trim().toUpperCase())}
-                  className="w-full rounded-2xl border border-rose-200 bg-white/80 px-4 py-3 text-center focus:outline-none focus:ring-2 focus:ring-rose-300"
-                  placeholder="HOME CODE"
-                />
-                <button
-                  onClick={() => onJoin(code)}
-                  disabled={!code || busy}
-                  className="w-full py-3 rounded-2xl bg-rose-400 hover:bg-rose-500 text-white font-semibold disabled:opacity-60"
-                >
-                  Enter Home
-                </button>
-              </div>
-              <div className="text-xs text-slate-400 uppercase tracking-wide">or</div>
-              <button
-                onClick={onCreate}
-                disabled={busy}
-                className="w-full py-3 rounded-2xl bg-emerald-400 hover:bg-emerald-500 text-white font-semibold disabled:opacity-60"
-              >
-                Create New Home
-              </button>
-            </div>
-          </div>
-        );
-      };
-
-      const App = () => {
-        const [gameState, setGameState] = useState(null);
-        const [loaded, setLoaded] = useState(false);
-        const [showShop, setShowShop] = useState(false);
-        const [cooldowns, setCooldowns] = useState({});
-        const [indicators, setIndicators] = useState([]);
-        const [toasts, setToasts] = useState([]);
-        const [firebaseRequired, setFirebaseRequired] = useState(false);
-        const [homeReady, setHomeReady] = useState(false);
-        const { playTone } = useAudio();
-
-        useEffect(() => {
-          toastUI.setHandler((toast) => {
-            setToasts((prev) => [...prev, toast]);
-            setTimeout(() => {
-              setToasts((prev) => prev.filter((t) => t.id !== toast.id));
-            }, 3500);
-          });
-        }, []);
-
-        useEffect(() => {
-          const stored = loadStoredHome();
-          let state = stored?.state || DEFAULT_STATE();
-          const now = Date.now();
-          if (state.lastSaved && now > state.lastSaved) {
-            state = applyTimeAdvance(state, now - state.lastSaved, now);
-          }
-          state.homeCode = stored?.homeCode ?? null;
-          setGameState(state);
-          setLoaded(true);
-          setFirebaseRequired(Boolean(window.BEARBUDDY_FIREBASE_CONFIG));
-        }, []);
-
-        useEffect(() => {
-          if (!loaded || !gameState) return;
-          persistHome({ state: gameState, homeCode: gameState.homeCode || null });
-        }, [gameState, loaded]);
-
-        useRemoteSync({ gameState, setGameState, homeCode: gameState?.homeCode });
-
-        useEffect(() => {
-          if (!gameState) return;
-          const loop = setInterval(() => {
-            setGameState((prev) => applyTimeAdvance(prev, Date.now() - prev.lastTick, Date.now()));
-          }, 1000);
-          return () => clearInterval(loop);
-        }, [gameState?.homeCode]);
-
-        const activeBear = useMemo(() => {
-          if (!gameState) return null;
-          return gameState.bears.find((bear) => bear.id === gameState.activeBearId) || gameState.bears[0];
-        }, [gameState]);
-
-        const handleAction = (actionKey) => {
-          if (!gameState || !activeBear) return;
-          const now = Date.now();
-          const action = ACTION_DEFS[actionKey];
-          if (!action) return;
-          playTone(ACTION_AUDIO[actionKey] || 480, 0.2);
-          setCooldowns((prev) => ({ ...prev, [actionKey]: true }));
-          setTimeout(() => {
-            setCooldowns((prev) => ({ ...prev, [actionKey]: false }));
-          }, 1000);
-
-          setGameState((prev) => {
-            const bears = prev.bears.map((bear) => {
-              if (bear.id !== activeBear.id) return bear;
-              const newStats = { ...bear.stats };
-              Object.entries(action.stats).forEach(([key, delta]) => {
-                newStats[key] = clamp(newStats[key] + delta);
-              });
-              if (actionKey === "sleep") {
-                newStats.energy = clamp(newStats.energy + 6);
-              }
-              const sickness = Object.values(newStats).some((v) => v <= 0);
-              const stage = determineStage(bear.ageMinutes);
-              return { ...bear, stats: newStats, sleeping: actionKey === "sleep", sickness, stage };
-            });
-            const diffTexts = Object.entries(action.stats)
-              .map(([key, delta]) => `${delta > 0 ? "+" : ""}${delta} ${key}`)
-              .join(" · ");
-            const log = addLogEntry(prev, `${action.label.split(" ")[0]} ${activeBear.name}: ${diffTexts}`);
-            return applyTimeAdvance({ ...prev, bears, log }, 0, now);
-          });
-
-          setIndicators((prev) => [
-            ...prev,
-            {
-              id: uuid(),
-              text: Object.entries(action.stats)
-                .map(([key, delta]) => `${delta > 0 ? "+" : ""}${delta} ${key}`)
-                .join(" • "),
-              offset: "45%",
-            },
-          ]);
-
-          setTimeout(() => {
-            setIndicators((prev) => prev.slice(1));
-          }, 900);
-        };
-
-        const handleUseItem = (key) => {
-          if (!gameState || !activeBear) return;
-          if (!gameState.inventory[key]) {
-            toastUI.push("Pantry is empty for that item!", "error");
-            return;
-          }
-          setGameState((prev) => {
-            const bears = prev.bears.map((bear) => {
-              if (bear.id !== activeBear.id) return bear;
-              const stats = { ...bear.stats };
-              if (key === "honey") stats.hunger = clamp(stats.hunger + 25);
-              if (key === "soap") stats.cleanliness = clamp(stats.cleanliness + 25);
-              if (key === "toy") stats.happiness = clamp(stats.happiness + 25);
-              const sickness = Object.values(stats).some((v) => v <= 0);
-              return { ...bear, stats, sickness };
-            });
-            const inventory = { ...prev.inventory, [key]: prev.inventory[key] - 1 };
-            const log = addLogEntry(prev, `${activeBear.name} enjoyed ${key}. ${randomEmoji()}`);
-            return applyTimeAdvance({ ...prev, bears, inventory, log }, 0, Date.now());
-          });
-        };
-
-        const handlePurchase = (item) => {
-          if (!gameState) return;
-          if (gameState.coins < item.cost) {
-            toastUI.push("Not enough coins for that treasure!", "error");
-            return;
-          }
-          setGameState((prev) => {
-            let bears = prev.bears;
-            let inventory = { ...prev.inventory };
-            let log = prev.log;
-            if (item.inventoryKey) {
-              inventory[item.inventoryKey] = (inventory[item.inventoryKey] || 0) + 1;
-              log = addLogEntry(prev, `${item.name} stocked in the pantry.`);
-            } else if (item.id === "adopt") {
-              const newName = INITIAL_BEAR_NAMES[prev.bears.length % INITIAL_BEAR_NAMES.length];
-              const newBear = createBear(newName);
-              bears = [...prev.bears, newBear];
-              log = addLogEntry(prev, `${newName} joined the den! ${randomEmoji()}`);
-            }
-            const coins = prev.coins - item.cost;
-            toastUI.push(`${item.name} purchased!`, "info");
-            return applyTimeAdvance({ ...prev, bears, inventory, coins, log }, 0, Date.now());
-          });
-        };
-
-        const handleSelectBear = (bearId) => {
-          setGameState((prev) => ({ ...prev, activeBearId: bearId }));
-        };
-
-        const handleCheckIn = () => {
-          if (!gameState) return;
-          const today = new Date().toLocaleDateString();
-          if (gameState.streak.lastCheckInDate === today) return;
-          setGameState((prev) => {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const prevDate = prev.streak.lastCheckInDate;
-            const continued = prevDate === yesterday.toLocaleDateString();
-            const newCount = continued ? prev.streak.count + 1 : 1;
-            let bonus = 10;
-            if (newCount % 7 === 0) {
-              bonus += 50;
-            }
-            const log = addLogEntry(prev, `Team check-in streak ${newCount}! +${bonus} coins.`);
-            toastUI.push(`Check-in complete! +${bonus} coins`, "info");
-            return applyTimeAdvance(
-              {
-                ...prev,
-                coins: prev.coins + bonus,
-                streak: { count: newCount, lastCheckInDate: today },
-                log,
-              },
-              0,
-              Date.now()
-            );
-          });
-        };
-
-        const registerHome = (code) => {
-          setGameState((prev) => ({ ...prev, homeCode: code }));
-          setHomeReady(true);
-        };
-
-        const handleCreateHome = () => {
-          const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-          toastUI.push(`New home created: ${code}`, "info");
-          registerHome(code);
-        };
-
-        const handleJoinHome = (code) => {
-          if (!code) return;
-          registerHome(code);
-        };
-
-        useEffect(() => {
-          if (!firebaseRequired) {
-            setHomeReady(true);
-          } else if (gameState?.homeCode) {
-            setHomeReady(true);
-          }
-        }, [firebaseRequired, gameState?.homeCode]);
-
-        const dismissToast = (id) => {
-          setToasts((prev) => prev.filter((toast) => toast.id !== id));
-        };
-
-        if (!loaded || !gameState) {
-          return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-100 via-amber-100 to-sky-100">
-              <div className="text-center space-y-4">
-                <div className="text-4xl">🐻</div>
-                <p className="text-slate-600">Preparing the cozy den…</p>
-              </div>
-            </div>
-          );
-        }
-
-        if (firebaseRequired && !homeReady) {
-          return <HomeGate busy={false} onCreate={handleCreateHome} onJoin={handleJoinHome} />;
-        }
-
-        const countdown = activeBear ? getPayCountdown(gameState, activeBear.id) : null;
-        const moodEmoji = activeBear?.sickness
-          ? "🤒"
-          : activeBear && activeBear.stats.happiness > 80
-          ? "🥰"
-          : activeBear && activeBear.stats.hunger < 30
-          ? "😬"
-          : "😊";
-        const daysTogether = activeBear ? Math.floor(activeBear.ageMinutes / (60 * 24)) : 0;
-        const onShift = activeBear?.working;
-
-        return (
-          <div className="relative min-h-screen pb-20">
-            <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-              <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div>
-                  <h1 className="text-4xl md:text-5xl font-black text-rose-500 drop-shadow-sm">
-                    Gabe &amp; Savannah's Team Bear {moodEmoji}
-                  </h1>
-                  <p className="text-slate-600 max-w-2xl mt-2">
-                    Care together, earn together. Keep every bear in the den happy, healthy, and ready for big adventures.
-                  </p>
-                </div>
-                <div className="bg-white/80 rounded-3xl px-5 py-4 shadow-lg border border-white/70">
-                  <p className="text-sm text-slate-500">Days together</p>
-                  <p className="text-3xl font-black text-emerald-500">{daysTogether}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${onShift ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"}`}>
-                      {onShift ? "On shift" : "Off shift"}
-                    </span>
-                    {activeBear?.sickness && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-500">
-                        Needs rest
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                {ui.packModal.cards.map((card) => (
+                  <div key={card.id} className="relative">
+                    <div className="absolute inset-0 animate-[pack-sparkle_2.6s_ease-in-out_infinite] rounded-2xl bg-gradient-to-br from-white/20 via-transparent to-white/40"></div>
+                    <CardPill
+                      card={card}
+                      count={state.cardCollection[card.id]?.count || 1}
+                      onActivate={() => {}}
+                    />
+                    {ui.packModal.newlyDiscovered.includes(card.id) && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-white shadow">
+                        New!
                       </span>
                     )}
-                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-500">
-                      Streak {gameState.streak.count}
-                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 rounded-2xl bg-rose-50 p-4 text-center text-sm text-rose-500">
+                Essence gained: {ui.packModal.essenceGain}
+              </div>
+            </div>
+          </div>
+        ) : null;
+
+        const eventBanner = ui.eventBanner ? (
+          <div className={`rounded-3xl border border-amber-300 ${ui.eventBanner.theme} p-5 text-center text-slate-700`}>
+            <div className="text-sm font-semibold uppercase tracking-wide text-amber-600">Special Day!</div>
+            <div className="mt-1 text-xl font-bold">{ui.eventBanner.name}</div>
+            <p className="text-sm text-slate-600">{ui.eventBanner.scene}</p>
+            <p className="mt-3 text-sm text-amber-600">Bonus 100 coins + 10 Bear Essence gifted to celebrate.</p>
+          </div>
+        ) : null;
+        return (
+          <div className="relative min-h-screen bg-gradient-to-br from-white/70 via-white/30 to-white/60" style={themeStyle}>
+            {hearts && <div className="pointer-events-none absolute inset-0 overflow-hidden">{hearts}</div>}
+            <div className="relative mx-auto flex max-w-7xl flex-col gap-10 p-6 text-slate-700">
+              <header className="rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h1 className="text-3xl font-black text-slate-800" style={{ color: state.den.themePrimary }}>
+                      {state.den.denName}
+                    </h1>
+                    <p className="text-sm text-slate-500">{state.den.motto}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
+                    <div className="rounded-2xl bg-rose-100 px-4 py-2 text-rose-500">Coins: {state.coins}</div>
+                    <div className="rounded-2xl bg-indigo-100 px-4 py-2 text-indigo-500">Bear Essence: {state.bearEssence}</div>
+                    <div className="rounded-2xl bg-emerald-100 px-4 py-2 text-emerald-500">Level {state.level}</div>
                   </div>
                 </div>
+                {eventBanner && <div className="mt-6">{eventBanner}</div>}
               </header>
 
-              <BearCarousel bears={gameState.bears} activeBearId={activeBear?.id} onSelect={handleSelectBear} />
-
-              <section className="grid lg:grid-cols-[1.2fr_1fr] gap-8">
-                <div className="bg-white/80 rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-6">
-                  <div
-                    className={`relative w-64 h-64 rounded-full bg-gradient-to-br from-amber-200 via-amber-300 to-amber-100 shadow-inner border-4 border-white flex items-center justify-center text-8xl bear-avatar ${
-                      activeBear?.stats.hunger < 30 ? "hungry" : ""
-                    } ${activeBear?.stats.happiness > 80 ? "sparkle" : ""}`}
-                  >
-                    <span>{activeBear?.sickness ? "🤒" : "🐻"}</span>
-                  </div>
-                  <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-black">{activeBear?.name}</h2>
-                    <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-500 font-semibold">{activeBear?.stage}</span>
-                      <span>{moodEmoji} Mood</span>
-                    </div>
-                    {activeBear && <StageProgress bear={activeBear} />}
-                    <div className="text-sm text-slate-500">
-                      Paycheck in: {countdown ? formatTime(countdown) : "—"} {countdown && <span>({gameState.workLedger[activeBear.id]?.lastRate || 0} 🪙/min)</span>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold">Bear Health</h3>
-                      <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
-                        activeBear?.sickness ? "bg-rose-100 text-rose-500" : "bg-emerald-100 text-emerald-600"
-                      }`}>
-                        {activeBear?.sickness ? "Sick" : "Healthy"}
-                      </span>
-                    </div>
-                    {activeBear && (
-                      <div className="space-y-3">
-                        <StatBar label="Hunger" value={activeBear.stats.hunger} />
-                        <StatBar label="Energy" value={activeBear.stats.energy} />
-                        <StatBar label="Cleanliness" value={activeBear.stats.cleanliness} />
-                        <StatBar label="Happiness" value={activeBear.stats.happiness} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
-                    <h3 className="text-xl font-bold">Actions</h3>
-                    <ActionButtons
-                      onAction={handleAction}
-                      cooldowns={cooldowns}
-                      disabled={!activeBear || activeBear.sickness}
-                    />
-                  </div>
-
-                  <InventoryPanel inventory={gameState.inventory} onUseItem={handleUseItem} disabled={!activeBear} />
-                </div>
-              </section>
-
-              <section className="grid lg:grid-cols-[1fr_1fr] gap-6">
-                <div className="bg-white/80 rounded-3xl shadow-xl p-6 space-y-4">
+              <section className="grid gap-6 lg:grid-cols-3">
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold">Shared Wallet</h3>
-                      <p className="text-sm text-slate-500">Keep every stat above 50 to stay on shift and earn steady pay.</p>
+                      <h2 className="text-xl font-bold text-slate-700">Gabe and Savannah's Bear Game Stats</h2>
+                      <p className="text-xs text-slate-400">Keep Honey happy and thriving.</p>
                     </div>
-                    <div className="text-3xl font-black text-amber-500">{gameState.coins} 🪙</div>
+                    <div className="h-16 w-16 rounded-full border-4 border-white bg-gradient-to-br from-amber-200 to-rose-200 p-1">
+                      <div
+                        className="flex h-full w-full items-center justify-center rounded-full text-3xl"
+                        style={{ backgroundColor: state.customBear.furColor }}
+                      >
+                        🐻
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setShowShop(true)}
-                    className="w-full py-3 rounded-2xl bg-rose-400 hover:bg-rose-500 text-white font-semibold"
-                  >
-                    Visit Boutique
-                  </button>
-                  <CheckInPanel streak={gameState.streak} onCheckIn={handleCheckIn} disabled={!activeBear} />
+                  <div className="space-y-3">
+                    <StatBar label="Hunger" value={state.stats.hunger} color="bg-amber-400" />
+                    <StatBar label="Energy" value={state.stats.energy} color="bg-indigo-400" />
+                    <StatBar label="Cleanliness" value={state.stats.cleanliness} color="bg-sky-400" />
+                    <StatBar label="Happiness" value={state.stats.happiness} color="bg-rose-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <span>XP Progress</span>
+                      <span>
+                        {state.xp}/{getXpForNextLevel(state.level)}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-3 rounded-full bg-slate-200">
+                      <div className="h-3 rounded-full bg-gradient-to-r from-rose-400 to-amber-400" style={{ width: `${levelProgress}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {Object.keys(ACTION_DEFS).map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => applyAction(key)}
+                        className={`action-button group rounded-2xl bg-gradient-to-r ${ACTION_DEFS[key].color} px-4 py-3 text-left font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl`}
+                      >
+                        <div>{ACTION_DEFS[key].label}</div>
+                        <div className="text-xs font-normal opacity-80">+{ACTION_DEFS[key].xp} XP · +{ACTION_DEFS[key].coins} coins</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-700">Card Collection</h2>
+                      <p className="text-xs text-slate-400">Open packs to discover new bear cards.</p>
+                    </div>
+                    <button
+                      onClick={openPack}
+                      className="rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-4 py-2 text-sm font-semibold text-white shadow hover:shadow-lg"
+                    >
+                      Buy Pack ({PACK_COST} coins)
+                    </button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {CARD_LIBRARY.map((card) => {
+                      const count = state.cardCollection[card.id]?.count || 0;
+                      return count ? (
+                        <CardPill key={card.id} card={card} count={count} onActivate={activatePowerUp} />
+                      ) : (
+                        <div
+                          key={card.id}
+                          className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-xs text-slate-400"
+                        >
+                          <span className="text-2xl">❔</span>
+                          <span>{card.rarity} card</span>
+                          <span>Undiscovered</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-2xl bg-slate-50/80 p-4 text-sm text-slate-600">
+                    <div className="font-semibold text-slate-700">Active Power-Ups</div>
+                    <div className="mt-2 space-y-2">
+                      {state.activePowerUps.length === 0 ? (
+                        <p className="text-xs text-slate-400">
+                          No power-ups active. Tap a collected card to empower your next adventures.
+                        </p>
+                      ) : (
+                        state.activePowerUps.map((power) => {
+                          const card = CARD_LIBRARY.find((c) => c.id === power.cardId);
+                          return (
+                            <div key={power.cardId} className="rounded-xl bg-white/70 p-3 text-xs">
+                              <div className="font-semibold text-slate-600">{card?.name}</div>
+                              <div className="text-slate-500">{card?.effect}</div>
+                              {power.uses && <div>Uses left: {power.uses}</div>}
+                              {power.expires && (
+                                <div className="text-[10px] text-slate-400">
+                                  Expires {new Date(power.expires).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-rose-50/80 p-4 text-sm text-rose-500">
+                    <div className="font-semibold text-rose-500">Essence Ledger</div>
+                    <p className="text-xs text-rose-400">
+                      Duplicated cards automatically become Bear Essence. Use essence for future upgrades & shared memories.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-700">Achievement Showcase</h2>
+                    <p className="text-xs text-slate-400">Celebrate milestones in your evolution.</p>
+                    <div className="mt-4 space-y-3 max-h-72 overflow-y-auto pr-2">
+                      {state.achievements.map((achievement) => (
+                        <AchievementBadge key={achievement.id} achievement={achievement} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-indigo-50/80 p-4 text-sm text-indigo-500">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-indigo-600">Adult Stage Jobs</div>
+                        <p className="text-xs text-indigo-400">
+                          Rarity-based jobs unlock with rarer cards. Pay scales with job rarity.
+                        </p>
+                      </div>
+                      <span className="text-2xl">💼</span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <select
+                        value={state.job.currentJobId || ''}
+                        onChange={(e) => assignJob(e.target.value)}
+                        className="w-full rounded-xl border border-indigo-200 bg-white/80 p-2 text-xs"
+                      >
+                        <option value="">Select a job</option>
+                        {availableJobs.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            [{job.rarity}] {job.title} · {job.pay} coins
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={performShift}
+                        className="w-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-400 px-4 py-2 text-xs font-semibold text-white shadow"
+                      >
+                        Work a Shift
+                      </button>
+                      <div className="text-[11px] text-indigo-400">
+                        Last shift: {state.job.lastShift ? new Date(state.job.lastShift).toLocaleString() : '—'}
+                      </div>
+                      <div className="max-h-32 overflow-y-auto rounded-xl bg-white/70 p-2 text-[11px] text-slate-500">
+                        {state.job.jobHistory.length === 0 ? (
+                          <div>No shifts yet. Activate jobs to earn coins!</div>
+                        ) : (
+                          state.job.jobHistory.map((shift) => (
+                            <div key={shift.id} className="flex justify-between">
+                              <span>{new Date(shift.time).toLocaleDateString()}</span>
+                              <span>{shift.pay} coins</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-emerald-50/80 p-4 text-sm text-emerald-500">
+                    <div className="font-semibold text-emerald-600">Easter Egg Tracker</div>
+                    <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">
+                      <li className={state.secretFlags.heartStorm ? 'text-emerald-500' : 'text-slate-400'}>
+                        Heartstorm unlocked: {state.secretFlags.heartStorm ? 'Yes' : 'Not yet'}
+                      </li>
+                      <li className={state.secretFlags.hiddenMessageFound ? 'text-emerald-500' : 'text-slate-400'}>
+                        Hidden message found: {state.secretFlags.hiddenMessageFound ? 'Yes' : 'Listen for whispers'}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
+              <section className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Den Customization</h2>
+                  <p className="text-xs text-slate-400">Name your shared den, set colors, and upload a cozy background.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold text-slate-500">
+                      Den Name
+                      <input
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                        value={state.den.denName}
+                        onChange={(e) => handleDenCustomization('denName', e.target.value)}
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Motto
+                      <input
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                        value={state.den.motto}
+                        onChange={(e) => handleDenCustomization('motto', e.target.value)}
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Theme Primary
+                      <input
+                        type="color"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
+                        value={state.den.themePrimary}
+                        onChange={(e) => handleDenCustomization('themePrimary', e.target.value)}
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Theme Secondary
+                      <input
+                        type="color"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
+                        value={state.den.themeSecondary}
+                        onChange={(e) => handleDenCustomization('themeSecondary', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className="text-xs font-semibold text-slate-500">
+                    Den Background (optional)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                      onChange={(e) => handleBackgroundUpload(e.target.files?.[0])}
+                    />
+                  </label>
+                  {state.den.backgroundImage && (
+                    <div className="overflow-hidden rounded-2xl border border-slate-200">
+                      <img src={state.den.backgroundImage} alt="Den background" className="h-40 w-full object-cover" />
+                    </div>
+                  )}
                 </div>
 
-                <ActivityLog entries={gameState.log} />
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Custom Bear Creator</h2>
+                  <p className="text-xs text-slate-400">Build your shared avatar with love-powered passives.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold text-slate-500">
+                      Bear Name
+                      <input
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                        value={state.customBear.name}
+                        onChange={(e) => handleBearCustomization('name', e.target.value)}
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Fur Color
+                      <input
+                        type="color"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
+                        value={state.customBear.furColor}
+                        onChange={(e) => handleBearCustomization('furColor', e.target.value)}
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Accessory
+                      <select
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                        value={state.customBear.accessory}
+                        onChange={(e) => handleBearCustomization('accessory', e.target.value)}
+                      >
+                        {['Flower Crown', 'Adventurer Hat', 'Starry Scarf', 'Scholar Glasses', 'Heart Bandana'].map((item) => (
+                          <option key={item}>{item}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs font-semibold text-slate-500">
+                      Passive Bonus
+                      <select
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
+                        value={state.customBear.passiveBonus}
+                        onChange={(e) => handleBearCustomization('passiveBonus', e.target.value)}
+                      >
+                        {Object.keys(PASSIVE_BONUSES).map((bonus) => (
+                          <option key={bonus}>{bonus}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="rounded-2xl bg-rose-50/70 p-4 text-xs text-rose-500">
+                    Passive effect: {PASSIVE_BONUSES[state.customBear.passiveBonus]?.description}
+                  </div>
+                </div>
               </section>
-            </div>
+              <section className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Shared Quest Board</h2>
+                  <p className="text-xs text-slate-400">Write couple goals, then capture memories when you complete them.</p>
+                  <form
+                    className="space-y-3 rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.target);
+                      const title = formData.get('title');
+                      const description = formData.get('description');
+                      if (!title) return;
+                      addQuest({
+                        title,
+                        description,
+                        rewardType: formData.get('rewardType'),
+                        rewardAmount: Number(formData.get('rewardAmount')) || 0,
+                      });
+                      e.target.reset();
+                    }}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="space-y-1">
+                        <span>Quest Title</span>
+                        <input name="title" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" required />
+                      </label>
+                      <label className="space-y-1">
+                        <span>Reward Amount</span>
+                        <input name="rewardAmount" type="number" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" placeholder="40" />
+                      </label>
+                    </div>
+                    <label className="space-y-1">
+                      <span>Description</span>
+                      <textarea name="description" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" rows="2"></textarea>
+                    </label>
+                    <label className="space-y-1">
+                      <span>Reward Type</span>
+                      <select name="rewardType" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2">
+                        <option value="coins">Coins</option>
+                        <option value="essence">Bear Essence</option>
+                        <option value="memory">Memory Entry</option>
+                      </select>
+                    </label>
+                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-emerald-400 to-rose-400 px-4 py-2 text-sm font-semibold text-white shadow">
+                      Add Quest
+                    </button>
+                  </form>
+                  <div className="space-y-3">
+                    {state.sharedQuests.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-xs text-slate-400">
+                        Create your first quest to begin the story!
+                      </div>
+                    ) : (
+                      state.sharedQuests.map((quest) => (
+                        <QuestCard key={quest.id} quest={quest} onComplete={completeQuest} />
+                      ))
+                    )}
+                  </div>
+                </div>
 
-            <ShopPanel open={showShop} onClose={() => setShowShop(false)} coins={gameState.coins} onPurchase={handlePurchase} />
-            <ToastStack toasts={toasts} dismiss={dismissToast} />
-            {indicators.length > 0 && <FloatingIndicators indicators={indicators} />}
+                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Love Notes & Memories</h2>
+                  <p className="text-xs text-slate-400">Send encouragement, document feelings, and keep an evolving scrapbook.</p>
+                  <form
+                    className="space-y-3 rounded-2xl bg-rose-50/70 p-4 text-xs text-rose-500"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.target);
+                      const author = formData.get('author');
+                      const text = formData.get('text');
+                      if (!text) return;
+                      addLoveNote({ author, text, memory: formData.get('memory') });
+                      e.target.reset();
+                    }}
+                  >
+                    <label className="space-y-1">
+                      <span>Author</span>
+                      <select name="author" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2">
+                        <option>Gabe</option>
+                        <option>Savannah</option>
+                        <option>Gabe and Savannah's Bear Game</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1">
+                      <span>Note</span>
+                      <textarea name="text" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2" rows="3" required></textarea>
+                    </label>
+                    <label className="space-y-1">
+                      <span>Memory (optional)</span>
+                      <input name="memory" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2" placeholder="Favorite moment or gratitude" />
+                    </label>
+                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-4 py-2 text-sm font-semibold text-white shadow">
+                      Send Love Note
+                    </button>
+                  </form>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {state.loveNotes.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-rose-200 bg-white/60 p-4 text-xs text-rose-400">
+                        Leave your first love note to spark the board.
+                      </div>
+                    ) : (
+                      state.loveNotes.map((note) => (
+                        <LoveNoteCard key={note.id} note={note} onUpdate={(text) => updateLoveNote(note.id, text)} />
+                      ))
+                    )}
+                  </div>
+                  <div className="rounded-2xl bg-amber-50/70 p-4 text-xs text-amber-500">
+                    <div className="font-semibold text-amber-600">Memory Timeline</div>
+                    <div className="mt-2 space-y-2">
+                      {state.denMemories.length === 0 ? (
+                        <div>No quest memories yet. Complete a quest and add a reflection!</div>
+                      ) : (
+                        state.denMemories.map((memory) => (
+                          <div key={memory.id} className="rounded-xl bg-white/80 p-3">
+                            <div className="text-[11px] text-amber-400">{formatDate(memory.createdAt)}</div>
+                            <div className="text-sm font-semibold text-amber-600">{memory.questTitle}</div>
+                            <div className="text-xs text-amber-500">{memory.text}</div>
+                            {memory.photo && (
+                              <img src={memory.photo} alt="Memory" className="mt-2 h-24 w-full rounded-xl object-cover" />
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+              <section className="grid gap-6 lg:grid-cols-3">
+                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Daily Verse · Prayer Corner</h2>
+                  <p className="text-xs text-slate-400">Cycle through inspiration or read together as a shared devotion.</p>
+                  <div className="rounded-2xl bg-indigo-50/80 p-4 text-sm text-indigo-500">
+                    <div className="text-xs uppercase text-indigo-400">{verse.ref}</div>
+                    <div className="mt-2 text-base font-semibold text-indigo-600">{verse.text}</div>
+                    <button
+                      onClick={cycleVerse}
+                      className="mt-4 rounded-full bg-gradient-to-r from-indigo-400 to-rose-400 px-4 py-2 text-xs font-semibold text-white shadow"
+                    >
+                      Next Verse
+                    </button>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500">
+                    <div className="font-semibold text-slate-600">Prayer Prompts</div>
+                    <ul className="mt-2 list-disc space-y-1 pl-4">
+                      <li>Thankful for today's shared laughter.</li>
+                      <li>Pray for courage as you pursue a quest together.</li>
+                      <li>Bless family, friends, and future adventures.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Date-Based Events</h2>
+                  <p className="text-xs text-slate-400">Celebrate birthdays, anniversaries, and custom milestones.</p>
+                  <form
+                    className="space-y-3 rounded-2xl bg-amber-50/70 p-4 text-xs text-amber-500"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.target);
+                      const name = formData.get('eventName');
+                      const date = formData.get('eventDate');
+                      const scene = formData.get('eventScene');
+                      if (!name || !date) return;
+                      addEvent({ name, date, scene, theme: 'bg-amber-100' });
+                      e.target.reset();
+                    }}
+                  >
+                    <label className="space-y-1">
+                      <span>Event Name</span>
+                      <input name="eventName" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" required />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Date (MM-DD)</span>
+                      <input name="eventDate" pattern="[0-9]{2}-[0-9]{2}" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" placeholder="02-14" required />
+                    </label>
+                    <label className="space-y-1">
+                      <span>Scene Description</span>
+                      <input name="eventScene" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" />
+                    </label>
+                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-white shadow">
+                      Add Event
+                    </button>
+                  </form>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-2xl bg-white/70 p-3 text-xs text-slate-500">
+                    {state.events.map((event) => (
+                      <div key={event.id} className="rounded-xl bg-slate-50/80 p-3">
+                        <div className="text-[11px] text-slate-400">{event.date}</div>
+                        <div className="text-sm font-semibold text-slate-600">{event.name}</div>
+                        <div className="text-xs text-slate-500">{event.scene}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
+                  <h2 className="text-xl font-bold text-slate-700">Sync & History</h2>
+                  <p className="text-xs text-slate-400">Optional Firebase sync keeps shared data across devices.</p>
+                  <label className="text-xs font-semibold text-slate-500">
+                    Firebase Config (JSON)
+                    <textarea
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2"
+                      rows="4"
+                      value={state.firebaseConfig}
+                      onChange={(e) => updateFirebaseConfig(e.target.value)}
+                    ></textarea>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      className={`rounded-full px-4 py-2 text-xs font-semibold text-white shadow ${
+                        state.firebaseSyncEnabled ? 'bg-emerald-400' : 'bg-slate-300'
+                      }`}
+                      onClick={() =>
+                        updateState((prev) => ({
+                          ...prev,
+                          firebaseSyncEnabled: !prev.firebaseSyncEnabled,
+                        }))
+                      }
+                    >
+                      {state.firebaseSyncEnabled ? 'Disable Sync' : 'Enable Sync'}
+                    </button>
+                    <span className="text-[11px] text-slate-400">
+                      Sync is simulated. Configure Firebase Firestore to enable real-time sharing.
+                    </span>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500">
+                    <div className="font-semibold text-slate-600">Recent Packs</div>
+                    <ul className="mt-2 space-y-1">
+                      {state.packHistory.length === 0 ? (
+                        <li>No packs opened yet.</li>
+                      ) : (
+                        state.packHistory.map((pack) => (
+                          <li key={pack.id}>
+                            {new Date(pack.time).toLocaleString()} · {pack.cards.join(', ')} · +{pack.essenceGain} essence
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+              {packModal}
+            </div>
+            {ui.toast && (
+              <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-2xl bg-white/90 p-4 text-center text-sm font-semibold text-slate-600 shadow-lg">
+                {ui.toast.message}
+              </div>
+            )}
           </div>
         );
       };
 
-      const RootApp = () => {
-        const [firebaseReady, setFirebaseReady] = useState(false);
-        return (
-          <FirebaseProvider onHomeLoaded={() => setFirebaseReady(true)}>
-            <App firebaseReady={firebaseReady} />
-          </FirebaseProvider>
-        );
-      };
-
-      ReactDOM.createRoot(document.getElementById("root")).render(<RootApp />);
-    </script>
-
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("service-worker.js")
-            .catch((err) => console.warn("Service worker registration failed", err));
-        });
-      }
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
   </body>
 </html>
