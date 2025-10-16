@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gabe and Savannah's Bear Game</title>
+    <title>Team Bear · Studio Edition</title>
+    <meta name="theme-color" content="#0f172a" />
     <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#f9a8d4" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -14,1750 +14,1818 @@
     <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <style>
       body {
-        font-family: "Nunito", "Baloo 2", ui-rounded, "Segoe UI", sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 20%, #1f2937, #020617 65%);
+        color: #e2e8f0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
       }
-      @keyframes pack-sparkle {
-        0%,
-        100% {
-          opacity: 0.2;
-          transform: scale(0.8) rotate(0deg);
-        }
-        50% {
-          opacity: 1;
-          transform: scale(1.08) rotate(12deg);
-        }
+      .glass {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.75));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 80px rgba(2, 6, 23, 0.65);
       }
-      @keyframes heart-float {
+      .soft-scroll::-webkit-scrollbar {
+        width: 10px;
+      }
+      .soft-scroll::-webkit-scrollbar-thumb {
+        background-color: rgba(148, 163, 184, 0.35);
+        border-radius: 9999px;
+      }
+      .card-shimmer {
+        position: relative;
+        overflow: hidden;
+      }
+      .card-shimmer::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 60%;
+        height: 100%;
+        background: linear-gradient(110deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
+        animation: sheen 2.6s ease-in-out infinite;
+      }
+      @keyframes sheen {
         0% {
-          transform: translateY(0) scale(0.9);
-          opacity: 0.8;
-        }
-        60% {
-          opacity: 1;
+          transform: translateX(0);
         }
         100% {
-          transform: translateY(-120px) scale(1.3);
-          opacity: 0;
+          transform: translateX(260%);
         }
       }
-      .heart-particle {
-        animation: heart-float 3.2s ease-in infinite;
+      .toast-enter {
+        animation: toast-in 0.4s ease forwards;
       }
-      .card-flip {
-        perspective: 1000px;
+      @keyframes toast-in {
+        0% {
+          opacity: 0;
+          transform: translateY(10px) scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
       }
-      .card-flip-inner {
-        transition: transform 0.8s;
-        transform-style: preserve-3d;
-      }
-      .card-flip:hover .card-flip-inner {
-        transform: rotateY(180deg);
-      }
-      .card-face {
-        backface-visibility: hidden;
-      }
-      .card-face-back {
-        transform: rotateY(180deg);
+      .mini-game-overlay canvas {
+        box-shadow: 0 16px 50px rgba(15, 23, 42, 0.5);
+        border-radius: 26px;
       }
     </style>
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-pink-100 via-amber-100 to-sky-100 text-slate-800">
-    <div id="root"></div>
-
+  <body class="min-h-screen">
+    <div id="root" class="min-h-screen"></div>
     <script type="text/babel">
-      const { useState, useEffect, useMemo } = React;
+      const { useState, useEffect, useMemo, useRef } = React;
 
-      const STORAGE_KEY = "team_bear_evolution";
-      const PACK_COST = 150;
-      const ACTION_DEFS = {
-        feed: {
-          label: "Honey Feast 🍯",
-          color: "from-amber-400 to-amber-500",
-          stats: { hunger: 28, happiness: 8 },
-          xp: 24,
-          coins: 6,
-        },
-        clean: {
-          label: "Bubble Spa 🫧",
-          color: "from-sky-400 to-sky-500",
-          stats: { cleanliness: 30, happiness: 6 },
-          xp: 20,
-          coins: 4,
-        },
-        play: {
-          label: "Playtime Parade 🎈",
-          color: "from-rose-400 to-rose-500",
-          stats: { happiness: 26, energy: -8, cleanliness: -4 },
-          xp: 28,
-          coins: 8,
-        },
-        adventure: {
-          label: "Adventure Walk 🌲",
-          color: "from-emerald-400 to-emerald-500",
-          stats: { energy: -10, happiness: 20, cleanliness: -6 },
-          xp: 34,
-          coins: 14,
-        },
-        sleep: {
-          label: "Snuggle Nap 🌙",
-          color: "from-indigo-400 to-indigo-500",
-          stats: { energy: 34, cleanliness: -5 },
-          xp: 18,
-          coins: 4,
-        },
-      };
-
-      const DECAY_PER_MINUTE = { hunger: 6, energy: 4, cleanliness: 5, happiness: 3 };
-
-      const RARITY_DATA = {
-        Common: { weight: 60, color: "bg-lime-200", border: "border-lime-400", essence: 6, multiplier: 1 },
-        Uncommon: { weight: 22, color: "bg-sky-200", border: "border-sky-400", essence: 10, multiplier: 1.2 },
-        Rare: { weight: 10, color: "bg-violet-200", border: "border-violet-400", essence: 16, multiplier: 1.5 },
-        Epic: { weight: 6, color: "bg-rose-200", border: "border-rose-400", essence: 24, multiplier: 1.8 },
-        Mythic: { weight: 2, color: "bg-amber-200", border: "border-amber-400", essence: 40, multiplier: 2.3 },
-      };
-
-      const CARD_LIBRARY = [
-        {
-          id: "honey-hugs",
-          name: "Honey Hugs",
-          rarity: "Common",
-          type: "boost",
-          effect: "+10 Happiness on next action",
-          power: { stat: "happiness", amount: 10 },
-          lore: "Warm embraces sweetened by love.",
-        },
-        {
-          id: "sparkle-snack",
-          name: "Sparkle Snack",
-          rarity: "Common",
-          type: "boost",
-          effect: "+8 Hunger fill",
-          power: { stat: "hunger", amount: 8 },
-          lore: "Tiny treats for growling tummies.",
-        },
-        {
-          id: "gentle-rain",
-          name: "Gentle Rain",
-          rarity: "Uncommon",
-          type: "cleanse",
-          effect: "+12 Cleanliness",
-          power: { stat: "cleanliness", amount: 12 },
-          lore: "Soft rain that polishes every paw.",
-        },
-        {
-          id: "moonlit-lullaby",
-          name: "Moonlit Lullaby",
-          rarity: "Uncommon",
-          type: "rest",
-          effect: "+10 Energy",
-          power: { stat: "energy", amount: 10 },
-          lore: "Whispers of stars tucking the bears in.",
-        },
-        {
-          id: "synchronized-giggles",
-          name: "Synchronized Giggles",
-          rarity: "Rare",
-          type: "xp",
-          effect: "1.25× XP for next 3 actions",
-          power: { xpMultiplier: 1.25, uses: 3 },
-          lore: "Shared laughs echo into growth.",
-        },
-        {
-          id: "evergreen-heart",
-          name: "Evergreen Heart",
-          rarity: "Rare",
-          type: "shield",
-          effect: "Slows stat decay for 20 minutes",
-          power: { decayReducer: 0.6, durationMinutes: 20 },
-          lore: "A vow to remain ever-bright.",
-        },
-        {
-          id: "aurora-crown",
-          name: "Aurora Crown",
-          rarity: "Epic",
-          type: "coins",
-          effect: "2× coin rewards for next job shift",
-          power: { coinMultiplier: 2, uses: 1 },
-          lore: "Royal glow of partnership.",
-        },
-        {
-          id: "guardian-roar",
-          name: "Guardian Roar",
-          rarity: "Epic",
-          type: "stats",
-          effect: "+12 to every stat instantly",
-          power: { allStats: 12 },
-          lore: "Let your love roar louder than worry.",
-        },
-        {
-          id: "soul-synch",
-          name: "Soul Synch",
-          rarity: "Mythic",
-          type: "legendary",
-          effect: "2× XP + coins for 5 actions",
-          power: { xpMultiplier: 2, coinMultiplier: 2, uses: 5 },
-          lore: "Two hearts evolving in perfect rhythm.",
-        },
-        {
-          id: "emberlight-trail",
-          name: "Emberlight Trail",
-          rarity: "Uncommon",
-          type: "quest",
-          effect: "Completing quests grants +20 coins",
-          power: { questBonus: 20, durationMinutes: 60 },
-          lore: "Guiding spark toward shared dreams.",
-        },
-        {
-          id: "artisan-paws",
-          name: "Artisan Paws",
-          rarity: "Rare",
-          type: "job",
-          effect: "Unlocks creative job tier",
-          power: { unlockJobRarity: "Rare" },
-          lore: "Crafting futures paw-in-paw.",
-        },
-        {
-          id: "starlit-bond",
-          name: "Starlit Bond",
-          rarity: "Epic",
-          type: "memory",
-          effect: "Quest memories earn +1 essence",
-          power: { memoryEssence: 1, durationMinutes: 1440 },
-          lore: "Constellations drawn from every date night.",
-        },
-      ];
-
-      const PASSIVE_BONUSES = {
-        "Gentle Healer": {
-          description: "+3 Happiness after every care action.",
-          apply(stats) {
-            return { ...stats, happiness: Math.min(100, stats.happiness + 3) };
-          },
-        },
-        "Honey Hoarder": {
-          description: "+3 coins after every action.",
-          coins: 3,
-        },
-        "Dreamy Dozer": {
-          description: "Sleep actions restore +8 extra energy.",
-          actionModifiers: { sleep: { energy: 8 } },
-        },
-        "Spark Runner": {
-          description: "Adventure gives +6 XP extra.",
-          actionXp: { adventure: 6 },
-        },
-      };
-      const JOB_DECK = {
-        Common: [
-          { id: "garden-helper", title: "Garden Helper", pay: 24, flavor: "Tending to the sunflower patch." },
-          { id: "story-hour", title: "Story Hour Host", pay: 30, flavor: "Reading to cubs with animated paws." },
-        ],
-        Uncommon: [
-          { id: "tea-alchemist", title: "Tea Alchemist", pay: 48, flavor: "Brewing calming blends for the den." },
-          { id: "songwriter", title: "Love Songwriter", pay: 56, flavor: "Writing duets of devotion." },
-        ],
-        Rare: [
-          { id: "glow-guild", title: "Glow Guild Artisans", pay: 78, flavor: "Crafting luminous keepsakes." },
-          { id: "council-guides", title: "Heart Council Guides", pay: 86, flavor: "Mentoring other bear couples." },
-        ],
-        Epic: [
-          { id: "aurora-navigators", title: "Aurora Navigators", pay: 120, flavor: "Charting radiant adventures." },
-        ],
-        Mythic: [
+      // === Balance constants (tune freely) ===
+      const CONFIG = {
+        STORAGE_KEY: "team_bear_v3",
+        GRID: { COLS: 8, ROWS: 5, TILE: 96 },
+        ROOM_PADDING: 32,
+        BEAR_SPEED_TPS: 0.25,
+        BEAR_IDLE_WINDOW_MS: [4200, 7800],
+        BEAR_SLEEP_WINDOW_MS: [9000, 15000],
+        FRAME_RATES: { idle: 9, walk: 10, sit: 8, sleep: 8, stretch: 9 },
+        STAT_DECAY_IDLE_PER_MIN: -0.1,
+        STAT_DECAY_CONTRACT_PER_MIN: -0.2,
+        STAT_DECAY_THRESHOLD: 90,
+        STAT_DECAY_REDUCTION_FACTOR: 0.5,
+        QUICK_CARE_COST: 40,
+        QUICK_CARE_BOOST: 10,
+        BASE_STAT_MAX: 100,
+        STAT_MIN: 0,
+        CONTRACTS: [
           {
-            id: "legendary-keepers",
-            title: "Legendary Keepers",
-            pay: 180,
-            flavor: "Guarding sacred memories of Gabe and Savannah's Bear Game.",
+            id: "brief",
+            label: "30m Precision Brief",
+            durationMinutes: 30,
+            energyCost: 16,
+            payout: 320,
+          },
+          {
+            id: "audit",
+            label: "2h Compliance Audit",
+            durationMinutes: 120,
+            energyCost: 34,
+            payout: 820,
+          },
+          {
+            id: "overnight",
+            label: "8h Overnight Vigil",
+            durationMinutes: 480,
+            energyCost: 55,
+            payout: 2200,
           },
         ],
+        RARITIES: {
+          Common: { multiplier: 1.0, tone: "text-slate-300", border: "border-slate-500" },
+          Rare: { multiplier: 1.2, tone: "text-sky-200", border: "border-sky-400" },
+          Epic: { multiplier: 1.5, tone: "text-violet-200", border: "border-violet-400" },
+          Legendary: { multiplier: 1.8, tone: "text-amber-200", border: "border-amber-400" },
+        },
+        DECOR_CATALOG: [
+          { id: "lamp", name: "Carbon Wall Lamp", moraleCap: 2, note: "+2 morale cap", tint: "#facc15", value: 150 },
+          { id: "fern", name: "Shadow Fern", moraleCap: 3, note: "+3 morale cap", tint: "#34d399", value: 180 },
+          { id: "turntable", name: "Analog Turntable", moraleCap: 4, note: "+4 morale cap", tint: "#38bdf8", value: 240 },
+          { id: "espresso", name: "Espresso Cart", moraleCap: 5, note: "+5 morale cap", tint: "#fb923c", value: 280 },
+        ],
+        ACCESSORY_LIBRARY: [
+          { id: "felt-fedora", name: "Felt Fedora", slot: "head", rarity: "Rare", color: "#facc15" },
+          { id: "sable-cape", name: "Sable Cape", slot: "body", rarity: "Epic", color: "#4c1d95" },
+          { id: "river-stone", name: "River Stone Pendant", slot: "neck", rarity: "Common", color: "#38bdf8" },
+          { id: "artisan-wrap", name: "Artisan Wrap", slot: "paws", rarity: "Rare", color: "#fb7185" },
+          { id: "steel-monocle", name: "Steel Monocle", slot: "head", rarity: "Legendary", color: "#fcd34d" },
+          { id: "umber-coat", name: "Umber Coat", slot: "colorway", rarity: "Epic", color: "#78350f" },
+          { id: "midnight-band", name: "Midnight Band", slot: "neck", rarity: "Epic", color: "#0ea5e9" },
+        ],
+        PACK_TYPES: {
+          standard: {
+            name: "Standard Pack",
+            draws: 3,
+            price: 180,
+            rarityWeights: { Common: 55, Rare: 30, Epic: 12, Legendary: 3 },
+            guaranteedAccessory: false,
+          },
+          elite: {
+            name: "Elite Pack",
+            draws: 4,
+            price: 420,
+            rarityWeights: { Common: 40, Rare: 34, Epic: 20, Legendary: 6 },
+            guaranteedAccessory: true,
+          },
+          premier: {
+            name: "Premier Pack",
+            draws: 5,
+            price: 760,
+            rarityWeights: { Common: 28, Rare: 36, Epic: 26, Legendary: 10 },
+            guaranteedAccessory: true,
+          },
+        },
+        MILESTONES: [
+          {
+            id: "professional-i",
+            name: "Professional I",
+            description: "Maintain every stat above 70 for three cumulative hours.",
+            reward: { credits: 240 },
+          },
+          {
+            id: "craftsman",
+            name: "Craftsman",
+            description: "Complete five contracts without morale dipping under 50.",
+            reward: { pack: "standard" },
+          },
+          {
+            id: "steady-hand",
+            name: "Steady Hand",
+            description: "Earn 10,000 lifetime credits.",
+            reward: { credits: 600 },
+          },
+        ],
+        MINI_GAME_LIMITS: { perHour: 2, perDay: 5, durationSeconds: 75 },
+        MINI_GAMES: [
+          {
+            id: "timberline",
+            name: "Timberline Rhythm",
+            description: "Tap on beat for streak multipliers.",
+            minReward: 60,
+            maxReward: 180,
+          },
+          {
+            id: "riverside",
+            name: "Riverside Fishing",
+            description: "Ride the timing bar to reel better catches.",
+            minReward: 30,
+            maxReward: 200,
+          },
+          {
+            id: "courier",
+            name: "Courier Run",
+            description: "Swap lanes and stay composed over distance.",
+            minReward: 45,
+            maxReward: 200,
+          },
+          { id: "memory", name: "Memory Rack", description: "Under construction.", disabled: true },
+          { id: "workshop", name: "Workshop", description: "Under construction.", disabled: true },
+        ],
+        KJV_VERSES: [
+          { ref: "Psalm 90:17", text: "And let the beauty of the LORD our God be upon us: and establish thou the work of our hands upon us." },
+          { ref: "Proverbs 22:29", text: "Seest thou a man diligent in his business? he shall stand before kings; he shall not stand before mean men." },
+          { ref: "Colossians 3:23", text: "And whatsoever ye do, do it heartily, as to the Lord, and not unto men." },
+        ],
+        FIREBASE_COLLECTION: "team_bear_profile_v3",
       };
 
-      const ACHIEVEMENT_DEFS = [
-        { id: "level-3", name: "Rising Cubs", description: "Reach Level 3 together.", goal: 3, type: "level" },
-        { id: "level-7", name: "Evolution Experts", description: "Reach Level 7.", goal: 7, type: "level" },
-        {
-          id: "cards-10",
-          name: "Collector's Spark",
-          description: "Discover 10 unique cards.",
-          goal: 10,
-          type: "uniqueCards",
-        },
-        {
-          id: "essence-100",
-          name: "Essence Keepers",
-          description: "Accumulate 100 Bear Essence.",
-          goal: 100,
-          type: "essence",
-        },
-        {
-          id: "quests-5",
-          name: "Questing Duo",
-          description: "Complete 5 shared quests.",
-          goal: 5,
-          type: "questsCompleted",
-        },
-        {
-          id: "notes-12",
-          name: "Love Letter Legends",
-          description: "Post 12 love notes.",
-          goal: 12,
-          type: "loveNotes",
-        },
-      ];
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const randomRange = (min, max) => Math.random() * (max - min) + min;
+      const now = () => Date.now();
 
-      const DAILY_VERSES = [
-        { ref: "1 Corinthians 16:14", text: "Let all that you do be done in love." },
-        { ref: "Ecclesiastes 4:12", text: "A cord of three strands is not quickly broken." },
-        {
-          ref: "Romans 12:10",
-          text: "Be devoted to one another in love. Honor one another above yourselves.",
-        },
-        { ref: "Psalm 143:8", text: "Let the morning bring me word of your unfailing love." },
-      ];
+      const weightedPick = (weights) => {
+        const total = Object.values(weights).reduce((sum, val) => sum + val, 0);
+        let threshold = Math.random() * total;
+        for (const key of Object.keys(weights)) {
+          threshold -= weights[key];
+          if (threshold <= 0) return key;
+        }
+        return Object.keys(weights)[0];
+      };
 
-      const DEFAULT_EVENTS = [
-        {
-          id: "gabe-birthday",
-          name: "Gabe's Birthday",
-          date: "05-04",
-          scene: "Gabe's joyful birthday flashback!",
-          theme: "bg-sky-200",
-          lastCelebratedYear: null,
+      const baseGameState = () => ({
+        credits: 720,
+        vouchers: 0,
+        rarity: "Epic",
+        stats: { energy: 88, cleanliness: 82, morale: 90 },
+        decor: [],
+        accessories: {
+          inventory: CONFIG.ACCESSORY_LIBRARY.map((item) => ({ ...item, quantity: item.rarity === "Common" ? 1 : 0 })),
+          equipped: { head: null, neck: null, body: null, paws: null, colorway: null },
         },
-        {
-          id: "savannah-birthday",
-          name: "Savannah's Birthday",
-          date: "07-14",
-          scene: "Savannah's confetti surprise!",
-          theme: "bg-rose-200",
-          lastCelebratedYear: null,
-        },
-        {
-          id: "anniversary",
-          name: "Anniversary of Gabe and Savannah's Bear Game",
-          date: "10-02",
-          scene: "Anniversary aurora lights up the den.",
-          theme: "bg-amber-200",
-          lastCelebratedYear: null,
-        },
-      ];
-
-      const DEFAULT_STATE = () => ({
-        version: 2,
-        coins: 420,
-        bearEssence: 12,
-        level: 1,
-        xp: 0,
-        xpHistory: [],
-        stats: { hunger: 80, energy: 76, cleanliness: 82, happiness: 94 },
-        lastTick: Date.now(),
-        discoveredCards: [],
-        cardCollection: {},
-        activePowerUps: [],
-        job: {
-          stage: "Adult",
-          currentJobId: null,
-          lastShift: null,
-          jobHistory: [],
-        },
-        sharedQuests: [],
-        completedQuestCount: 0,
-        loveNotes: [],
-        den: {
-          themePrimary: "#f472b6",
-          themeSecondary: "#60a5fa",
-          denName: "Gabe and Savannah's Bear Den",
-          motto: "Growing closer, leveling up love.",
-          backgroundImage: "",
-        },
-        customBear: {
-          name: "Honey",
-          furColor: "#f5deb3",
-          accessory: "Flower Crown",
-          passiveBonus: "Gentle Healer",
-        },
-        achievements: ACHIEVEMENT_DEFS.map((ach) => ({
-          ...ach,
-          achieved: false,
-          progress: 0,
-          completedOn: null,
-        })),
-        packHistory: [],
-        dailyVerseIndex: 0,
-        events: DEFAULT_EVENTS,
-        prayerCornerMode: "cycle",
-        firebaseConfig: "",
-        firebaseSyncEnabled: false,
-        denMemories: [],
-        secretFlags: {
-          heartStorm: false,
-          hiddenMessageFound: false,
-        },
+        packs: { standard: 1, elite: 0, premier: 0 },
+        milestones: CONFIG.MILESTONES.map((m) => ({ id: m.id, progress: 0, achieved: false, claimed: false })),
+        settings: { showKJV: false, volume: 0.4 },
+        contract: null,
+        lastTick: now(),
+        lifetime: { creditsEarned: 0, dutyMinutes: 0, contractsCompleted: 0, moraleAbove70Minutes: 0 },
+        miniGameUsage: {},
+        verseIndex: 0,
+        toast: [],
       });
 
-      const clampStat = (value) => Math.max(0, Math.min(100, Math.round(value)));
-      const getXpForNextLevel = (level) => 120 + (level - 1) * (level - 1) * 80;
+      const moraleMax = (decor) => CONFIG.BASE_STAT_MAX + decor.reduce((acc, item) => acc + (item.moraleCap || 0), 0);
 
-      const mergeDeep = (target, source) => {
-        if (typeof target !== "object" || target === null) return source;
-        const output = Array.isArray(target) ? [...target] : { ...target };
-        Object.keys(source || {}).forEach((key) => {
-          if (Array.isArray(source[key])) {
-            output[key] = source[key];
-          } else if (typeof source[key] === "object" && source[key] !== null) {
-            output[key] = mergeDeep(target[key] || {}, source[key]);
-          } else {
-            output[key] = source[key];
+      class SpriteAnimator {
+        constructor() {
+          this.state = "idle";
+          this.frames = this.createFrames();
+          this.frameIndex = 0;
+          this.accumulator = 0;
+          this.fps = CONFIG.FRAME_RATES.idle;
+        }
+
+        createFrames() {
+          const frame = (pose) => (ctx, flipped, accessories) => {
+            ctx.save();
+            if (flipped) {
+              ctx.scale(-1, 1);
+            }
+            const colorway = accessories?.colorway?.color || "#3f2f27";
+            ctx.fillStyle = colorway;
+            // body
+            ctx.beginPath();
+            ctx.ellipse(0, -20, 28, 30, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // belly
+            ctx.fillStyle = "#604437";
+            ctx.beginPath();
+            ctx.ellipse(0, -10, 14, 16, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // head
+            ctx.fillStyle = colorway;
+            ctx.beginPath();
+            ctx.ellipse(0, -54 + pose.headOffset, 22 + pose.headStretch, 18 + pose.headStretch, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#f1e4d0";
+            ctx.beginPath();
+            ctx.ellipse(0, -52 + pose.headOffset, 12 + pose.headStretch * 0.6, 9 + pose.headStretch * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // ears
+            ctx.fillStyle = colorway;
+            ctx.beginPath();
+            ctx.ellipse(-16, -70 + pose.headOffset, 6, 6, 0, 0, Math.PI * 2);
+            ctx.ellipse(16, -70 + pose.headOffset, 6, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // eyes
+            ctx.fillStyle = "#020617";
+            ctx.beginPath();
+            ctx.arc(-6 + pose.eyeOffset, -58 + pose.headOffset, 2, 0, Math.PI * 2);
+            ctx.arc(6 + pose.eyeOffset, -58 + pose.headOffset, 2, 0, Math.PI * 2);
+            ctx.fill();
+            // paws
+            ctx.fillStyle = colorway;
+            ctx.beginPath();
+            ctx.ellipse(-16 + pose.leftPaw.x, -4 + pose.leftPaw.y, 10, 14, 0.2, 0, Math.PI * 2);
+            ctx.ellipse(16 + pose.rightPaw.x, -4 + pose.rightPaw.y, 10, 14, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-12, 10 + pose.footOffset, 10, 14, 0, 0, Math.PI * 2);
+            ctx.ellipse(12, 10 + pose.footOffset, 10, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+            this.drawAccessories(ctx, accessories, pose);
+            ctx.restore();
+          };
+
+          const states = {
+            idle: [
+              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: -2, y: 2 }, rightPaw: { x: 2, y: -1 }, footOffset: 0 },
+              { headOffset: -1, headStretch: 0.4, eyeOffset: 0.4, leftPaw: { x: -1, y: 1 }, rightPaw: { x: 1, y: 0 }, footOffset: 0.4 },
+              { headOffset: 0, headStretch: 0, eyeOffset: -0.2, leftPaw: { x: -3, y: 2 }, rightPaw: { x: 3, y: -1 }, footOffset: 0 },
+            ],
+            walk: [
+              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: -6, y: -4 }, rightPaw: { x: 4, y: 6 }, footOffset: 0 },
+              { headOffset: -1, headStretch: 0.2, eyeOffset: 0, leftPaw: { x: -4, y: -2 }, rightPaw: { x: 6, y: 4 }, footOffset: 0 },
+              { headOffset: 0, headStretch: 0, eyeOffset: 0, leftPaw: { x: 4, y: 6 }, rightPaw: { x: -6, y: -4 }, footOffset: 0 },
+              { headOffset: -1, headStretch: 0.2, eyeOffset: 0, leftPaw: { x: 6, y: 4 }, rightPaw: { x: -4, y: -2 }, footOffset: 0 },
+            ],
+            sit: [
+              { headOffset: 3, headStretch: -0.6, eyeOffset: 0.2, leftPaw: { x: -12, y: 12 }, rightPaw: { x: 12, y: 12 }, footOffset: 4 },
+              { headOffset: 4, headStretch: -0.8, eyeOffset: 0.4, leftPaw: { x: -11, y: 12 }, rightPaw: { x: 11, y: 12 }, footOffset: 4 },
+            ],
+            sleep: [
+              { headOffset: 8, headStretch: 1.2, eyeOffset: -2, leftPaw: { x: -10, y: 14 }, rightPaw: { x: 10, y: 14 }, footOffset: 6 },
+              { headOffset: 9, headStretch: 1.4, eyeOffset: -2, leftPaw: { x: -11, y: 14 }, rightPaw: { x: 11, y: 14 }, footOffset: 6 },
+            ],
+            stretch: [
+              { headOffset: -6, headStretch: 0.6, eyeOffset: 0.2, leftPaw: { x: -8, y: -12 }, rightPaw: { x: 8, y: -12 }, footOffset: -4 },
+              { headOffset: -5, headStretch: 0.4, eyeOffset: 0.2, leftPaw: { x: -6, y: -10 }, rightPaw: { x: 6, y: -10 }, footOffset: -2 },
+              { headOffset: -6, headStretch: 0.6, eyeOffset: 0.2, leftPaw: { x: -8, y: -12 }, rightPaw: { x: 8, y: -12 }, footOffset: -4 },
+            ],
+          };
+
+          Object.keys(states).forEach((state) => {
+            states[state] = states[state].map((pose) => ({ draw: frame(pose) }));
+          });
+          return states;
+        }
+
+        drawAccessories(ctx, accessories, pose) {
+          if (!accessories) return;
+          if (accessories.head) {
+            ctx.save();
+            ctx.translate(0, -72 + pose.headOffset);
+            ctx.fillStyle = accessories.head.color;
+            ctx.fillRect(-18, -6, 36, 8);
+            ctx.fillRect(-14, -12, 28, 6);
+            ctx.restore();
           }
-        });
-        return output;
-      };
+          if (accessories.neck) {
+            ctx.save();
+            ctx.translate(0, -40 + pose.headOffset);
+            ctx.strokeStyle = accessories.neck.color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 14, Math.PI * 0.8, Math.PI * 0.2);
+            ctx.stroke();
+            ctx.restore();
+          }
+          if (accessories.body) {
+            ctx.save();
+            ctx.translate(0, -22);
+            ctx.fillStyle = accessories.body.color;
+            ctx.globalAlpha = 0.45;
+            ctx.fillRect(-24, -14, 48, 36);
+            ctx.restore();
+          }
+          if (accessories.paws) {
+            ctx.save();
+            ctx.translate(0, 4 + pose.footOffset);
+            ctx.fillStyle = accessories.paws.color;
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath();
+            ctx.ellipse(-12, 6, 12, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(12, 6, 12, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
 
+        setState(state) {
+          if (state === this.state) return;
+          this.state = state;
+          this.fps = CONFIG.FRAME_RATES[state] || 8;
+          this.frameIndex = 0;
+          this.accumulator = 0;
+        }
+
+        update(dt) {
+          const frames = this.frames[this.state];
+          if (!frames || frames.length === 0) return;
+          const frameDuration = 1000 / this.fps;
+          this.accumulator += dt;
+          while (this.accumulator >= frameDuration) {
+            this.accumulator -= frameDuration;
+            this.frameIndex = (this.frameIndex + 1) % frames.length;
+          }
+        }
+
+        draw(ctx, accessories, flipped) {
+          const frames = this.frames[this.state];
+          const current = frames[this.frameIndex] || frames[0];
+          ctx.save();
+          current.draw(ctx, flipped, accessories);
+          ctx.restore();
+        }
+      }
+      class BearController {
+        constructor(room) {
+          this.room = room;
+          this.animator = new SpriteAnimator();
+          this.gridPosition = { col: 3, row: 2 };
+          this.target = { ...this.gridPosition };
+          this.pixel = this.room.tileToPoint(this.gridPosition);
+          this.facing = 1;
+          this.behavior = "idle";
+          this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
+          this.sleepUntil = null;
+          this.accessories = {};
+        }
+
+        setAccessories(accessories) {
+          this.accessories = accessories;
+        }
+
+        pickNewTarget() {
+          this.target = this.room.randomTile();
+          this.behavior = "walk";
+          this.animator.setState("walk");
+        }
+
+        update(dt) {
+          if (this.sleepUntil && now() < this.sleepUntil) {
+            this.animator.setState("sleep");
+            this.animator.update(dt);
+            return;
+          }
+          if (this.sleepUntil && now() >= this.sleepUntil) {
+            this.sleepUntil = null;
+            this.behavior = "idle";
+            this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
+          }
+
+          const targetPoint = this.room.tileToPoint(this.target);
+          const dx = targetPoint.x - this.pixel.x;
+          const dy = targetPoint.y - this.pixel.y;
+          const distance = Math.hypot(dx, dy);
+          const speed = CONFIG.GRID.TILE * CONFIG.BEAR_SPEED_TPS * (dt / 1000);
+
+          if (distance > 1) {
+            this.animator.setState("walk");
+            this.facing = dx >= 0 ? 1 : -1;
+            const ratio = Math.min(speed / distance, 1);
+            const eased = easeInOutQuad(ratio);
+            this.pixel.x += dx * eased;
+            this.pixel.y += dy * eased;
+          } else {
+            this.gridPosition = { ...this.target };
+            if (this.behavior === "walk") {
+              this.behavior = "idle";
+              this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
+            }
+            this.animator.setState(this.behavior);
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+              this.chooseBehavior();
+            }
+          }
+          this.animator.update(dt);
+        }
+
+        chooseBehavior() {
+          const sequence = ["stretch", "sit", "walk", "sleep", "idle"];
+          const pick = sequence[Math.floor(Math.random() * sequence.length)];
+          if (pick === "walk") {
+            this.pickNewTarget();
+          } else if (pick === "sleep") {
+            this.behavior = "sleep";
+            this.sleepUntil = now() + randomRange(...CONFIG.BEAR_SLEEP_WINDOW_MS);
+          } else {
+            this.behavior = pick;
+            this.animator.setState(pick);
+            this.stateTimer = randomRange(...CONFIG.BEAR_IDLE_WINDOW_MS);
+          }
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.pixel.x, this.pixel.y);
+          this.animator.draw(ctx, this.accessories, this.facing < 0);
+          ctx.restore();
+        }
+      }
+
+      class EventBus {
+        constructor() {
+          this.listeners = {};
+        }
+        on(event, handler) {
+          if (!this.listeners[event]) this.listeners[event] = [];
+          this.listeners[event].push(handler);
+        }
+        off(event, handler) {
+          this.listeners[event] = (this.listeners[event] || []).filter((fn) => fn !== handler);
+        }
+        emit(event, payload) {
+          (this.listeners[event] || []).forEach((fn) => fn(payload));
+        }
+      }
+
+      class RoomEngine {
+        constructor(canvas, bus) {
+          this.canvas = canvas;
+          this.bus = bus;
+          this.ctx = canvas.getContext("2d");
+          this.decor = [];
+          this.width = CONFIG.GRID.COLS * CONFIG.GRID.TILE;
+          this.height = CONFIG.GRID.ROWS * CONFIG.GRID.TILE;
+          this.canvas.width = this.width;
+          this.canvas.height = this.height;
+          this.bear = new BearController(this);
+          this.pointer = { x: 0, y: 0 };
+          this.lastTick = now();
+          this.running = true;
+          this.setupInteractions();
+          this.loop();
+        }
+
+        setupInteractions() {
+          this.canvas.addEventListener("pointermove", (event) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.pointer = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            this.bus.emit("room-pointer", { ...this.pointer });
+          });
+          this.canvas.addEventListener("pointerleave", () => this.bus.emit("room-pointer-leave"));
+          this.canvas.addEventListener("pointerup", (event) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+            this.bus.emit("room-pointer-up", this.pointToTile(point));
+          });
+        }
+
+        randomTile() {
+          return {
+            col: Math.floor(Math.random() * CONFIG.GRID.COLS),
+            row: Math.floor(Math.random() * CONFIG.GRID.ROWS),
+          };
+        }
+
+        setDecor(decor) {
+          this.decor = decor;
+        }
+
+        setAccessories(accessories) {
+          this.bear.setAccessories(accessories);
+        }
+
+        tileToPoint(tile) {
+          return {
+            x: tile.col * CONFIG.GRID.TILE + CONFIG.GRID.TILE / 2,
+            y: tile.row * CONFIG.GRID.TILE + CONFIG.GRID.TILE * 0.85,
+          };
+        }
+
+        pointToTile(point) {
+          return {
+            col: clamp(Math.floor(point.x / CONFIG.GRID.TILE), 0, CONFIG.GRID.COLS - 1),
+            row: clamp(Math.floor(point.y / CONFIG.GRID.TILE), 0, CONFIG.GRID.ROWS - 1),
+          };
+        }
+
+        drawFloor(ctx) {
+          for (let row = 0; row < CONFIG.GRID.ROWS; row++) {
+            for (let col = 0; col < CONFIG.GRID.COLS; col++) {
+              const shade = (row + col) % 2 === 0 ? "rgba(30, 41, 59, 0.95)" : "rgba(15, 23, 42, 0.92)";
+              ctx.fillStyle = shade;
+              ctx.fillRect(col * CONFIG.GRID.TILE, row * CONFIG.GRID.TILE, CONFIG.GRID.TILE, CONFIG.GRID.TILE);
+              ctx.strokeStyle = "rgba(148, 163, 184, 0.1)";
+              ctx.strokeRect(col * CONFIG.GRID.TILE, row * CONFIG.GRID.TILE, CONFIG.GRID.TILE, CONFIG.GRID.TILE);
+            }
+          }
+        }
+
+        drawDecor(item) {
+          const ctx = this.ctx;
+          const pos = this.tileToPoint(item);
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
+          ctx.fillRect(-18, CONFIG.GRID.TILE * 0.35, 36, 6);
+          ctx.fillStyle = item.tint || "#38bdf8";
+          ctx.beginPath();
+          ctx.roundRect(-20, -40, 40, 52, 14);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        loop() {
+          if (!this.running) return;
+          const time = now();
+          const dt = time - this.lastTick;
+          this.lastTick = time;
+          this.update(dt);
+          this.render();
+          requestAnimationFrame(() => this.loop());
+        }
+
+        update(dt) {
+          this.bear.update(dt);
+        }
+
+        render() {
+          const ctx = this.ctx;
+          ctx.clearRect(0, 0, this.width, this.height);
+          this.drawFloor(ctx);
+          const entities = [
+            ...this.decor.map((item) => ({ type: "decor", item })),
+            { type: "bear", item: this.bear },
+          ];
+          entities.sort((a, b) => {
+            const ay = a.type === "bear" ? this.bear.pixel.y : this.tileToPoint(a.item).y;
+            const by = b.type === "bear" ? this.bear.pixel.y : this.tileToPoint(b.item).y;
+            return ay - by;
+          });
+          for (const entry of entities) {
+            if (entry.type === "decor") {
+              this.drawDecor(entry.item);
+            } else {
+              ctx.save();
+              ctx.translate(this.bear.pixel.x, this.bear.pixel.y);
+              this.bear.animator.draw(ctx, this.bear.accessories, this.bear.facing < 0);
+              ctx.restore();
+            }
+          }
+        }
+      }
       const loadState = () => {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return DEFAULT_STATE();
+          const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+          if (!raw) return baseGameState();
           const parsed = JSON.parse(raw);
-          return mergeDeep(DEFAULT_STATE(), parsed);
-        } catch (err) {
-          console.warn("Failed to load state", err);
-          return DEFAULT_STATE();
+          return { ...baseGameState(), ...parsed };
+        } catch (error) {
+          console.warn("Failed to read save", error);
+          return baseGameState();
         }
       };
 
       const saveState = (state) => {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state));
+      };
+
+      const mirrorToFirebase = async (state) => {
+        if (!window.BEAR_FIREBASE_CONFIG) return;
+        if (!window.firebase) return;
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch (err) {
-          console.warn("Failed to save state", err);
+          if (!window.firebase.apps.length) {
+            window.firebase.initializeApp(window.BEAR_FIREBASE_CONFIG);
+          }
+          const firestore = window.firebase.firestore();
+          await firestore.collection(CONFIG.FIREBASE_COLLECTION).doc("profile").set(state, { merge: true });
+        } catch (error) {
+          console.warn("Firebase mirror skipped", error);
         }
       };
 
-      const weightedRandomRarity = () => {
-        const totalWeight = Object.values(RARITY_DATA).reduce((sum, r) => sum + r.weight, 0);
-        const roll = Math.random() * totalWeight;
-        let cumulative = 0;
-        for (const rarity of Object.keys(RARITY_DATA)) {
-          cumulative += RARITY_DATA[rarity].weight;
-          if (roll <= cumulative) return rarity;
+      class PackEngine {
+        constructor(stateRef, setState) {
+          this.stateRef = stateRef;
+          this.setState = setState;
         }
-        return "Common";
-      };
 
-      const generatePackCards = () => {
-        return Array.from({ length: 3 }).map(() => {
-          const rarity = weightedRandomRarity();
-          const pool = CARD_LIBRARY.filter((card) => card.rarity === rarity);
-          return pool[Math.floor(Math.random() * pool.length)] || CARD_LIBRARY[0];
-        });
-      };
-
-      const essenceForCard = (cardId) => {
-        const card = CARD_LIBRARY.find((c) => c.id === cardId);
-        if (!card) return 0;
-        return RARITY_DATA[card.rarity]?.essence || 4;
-      };
-
-      const highestRarityUnlocked = (data) => {
-        const discovered = data.discoveredCards.map((id) => CARD_LIBRARY.find((c) => c.id === id)?.rarity);
-        const order = ["Common", "Uncommon", "Rare", "Epic", "Mythic"];
-        let maxIndex = 0;
-        discovered.forEach((rarity) => {
-          const idx = order.indexOf(rarity);
-          if (idx > maxIndex) maxIndex = idx;
-        });
-        return order[maxIndex];
-      };
-
-      const rarityToIndex = (rarity) => ["Common", "Uncommon", "Rare", "Epic", "Mythic"].indexOf(rarity);
-      const evaluateAchievements = (state) => {
-        const uniqueCards = state.discoveredCards.length;
-        const values = {
-          level: state.level,
-          uniqueCards,
-          essence: state.bearEssence,
-          questsCompleted: state.completedQuestCount,
-          loveNotes: state.loveNotes.length,
-        };
-
-        return state.achievements.map((ach) => {
-          const val = values[ach.type] || 0;
-          const progress = Math.min(ach.goal, val);
-          const achieved = progress >= ach.goal;
-          return {
-            ...ach,
-            progress,
-            achieved,
-            completedOn: achieved && !ach.completedOn ? Date.now() : ach.completedOn,
-          };
-        });
-      };
-
-      const applyDecay = (state) => {
-        const now = Date.now();
-        const minutesPassed = Math.max(0, (now - (state.lastTick || now)) / 60000);
-        if (minutesPassed < 0.1) return state;
-        const newStats = { ...state.stats };
-        Object.keys(newStats).forEach((key) => {
-          const baseDecay = DECAY_PER_MINUTE[key] || 0;
-          let decay = baseDecay * minutesPassed;
-          const activeDecayReducer = state.activePowerUps.find(
-            (p) => p.power.decayReducer && (!p.expires || p.expires > now)
-          );
-          if (activeDecayReducer) decay *= activeDecayReducer.power.decayReducer;
-          newStats[key] = clampStat(newStats[key] - decay);
-        });
-        return {
-          ...state,
-          stats: newStats,
-          lastTick: now,
-          activePowerUps: state.activePowerUps.filter(
-            (p) => !p.expires || p.expires > now || (p.uses && p.uses > 0)
-          ),
-        };
-      };
-
-      const detectEasterEggs = (text, state) => {
-        const lower = text.toLowerCase();
-        const updates = { ...state.secretFlags };
-        if (!updates.heartStorm && (lower.includes("forever") || lower.includes("bear hug"))) {
-          updates.heartStorm = true;
+        openPack(key) {
+          const pack = CONFIG.PACK_TYPES[key];
+          if (!pack) return [];
+          const state = this.stateRef.current;
+          if (state.credits < pack.price) return [];
+          state.credits -= pack.price;
+          const results = [];
+          const guaranteeIndex = pack.guaranteedAccessory ? Math.floor(Math.random() * pack.draws) : -1;
+          for (let i = 0; i < pack.draws; i++) {
+            const rarity = i === guaranteeIndex
+              ? weightedPick({ Rare: 45, Epic: 35, Legendary: 20 })
+              : weightedPick(pack.rarityWeights);
+            const dropAccessory = pack.guaranteedAccessory && i === guaranteeIndex ? true : Math.random() < 0.35;
+            if (dropAccessory) {
+              const pool = CONFIG.ACCESSORY_LIBRARY.filter((acc) => acc.rarity === rarity);
+              const accessory = pool[Math.floor(Math.random() * pool.length)] || CONFIG.ACCESSORY_LIBRARY[0];
+              const inventory = state.accessories.inventory.find((item) => item.id === accessory.id);
+              let duplicate = false;
+              if (inventory) {
+                if (inventory.quantity > 0) duplicate = true;
+                inventory.quantity += 1;
+              } else {
+                state.accessories.inventory.push({ ...accessory, quantity: 1 });
+              }
+              if (duplicate) {
+                const voucherGain = rarity === "Legendary" ? 12 : rarity === "Epic" ? 8 : rarity === "Rare" ? 5 : 2;
+                state.vouchers += voucherGain;
+                state.toast.push({ id: `voucher-${Date.now()}-${i}`, message: `Duplicate → Vouchers +${voucherGain}` });
+              }
+              results.push({ type: "accessory", rarity, accessory, duplicate });
+            } else {
+              const credits = Math.floor(lerp(40, 200, Math.random()));
+              state.credits += credits;
+              state.lifetime.creditsEarned += credits;
+              results.push({ type: "credit", rarity, credits });
+            }
+          }
+          this.setState({ ...state });
+          return results;
         }
-        if (!updates.hiddenMessageFound && lower.includes("gabe and savannah's bear game")) {
-          updates.hiddenMessageFound = true;
-        }
-        return updates;
-      };
+      }
 
-      const formatDate = (dateStr) => {
-        try {
-          return new Date(dateStr).toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-        } catch (err) {
-          return dateStr;
-        }
-      };
-
-      const formatMMDD = (date) => {
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const dd = String(date.getDate()).padStart(2, "0");
-        return `${mm}-${dd}`;
-      };
-
-      const eventShouldTrigger = (event, today) => {
-        if (!event?.date) return false;
-        const todayKey = formatMMDD(today);
-        if (todayKey !== event.date) return false;
-        if (event.lastCelebratedYear === today.getFullYear()) return false;
-        return true;
-      };
-
-      const StatBar = ({ label, value, color }) => (
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+      const defaultMiniGameState = () => ({
+        active: false,
+        id: null,
+        startTime: null,
+        score: 0,
+        data: {},
+        reward: 0,
+      });
+      const StatBar = ({ label, value, tone }) => (
+        <div className="mb-4">
+          <div className="mb-1 flex justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
             <span>{label}</span>
-            <span>{value}%</span>
+            <span>{Math.round(value)}</span>
           </div>
-          <div className="h-3 rounded-full bg-slate-200">
-            <div className={`h-3 rounded-full transition-all duration-500 ${color}`} style={{ width: `${value}%` }}></div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div className={`h-full ${tone}`} style={{ width: `${clamp(value, 0, 100)}%`, transition: "width 0.6s ease" }}></div>
           </div>
         </div>
       );
 
-      const AchievementBadge = ({ achievement }) => {
-        const complete = achievement.achieved;
+      const StatsPanel = ({ stats, decor, onQuickCare, canAfford }) => {
+        const moraleCap = moraleMax(decor);
         return (
-          <div
-            className={`rounded-xl border p-4 shadow-sm transition ${
-              complete ? "bg-white border-emerald-300" : "bg-slate-50 border-slate-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-full text-xl ${
-                  complete ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500"
+          <div className="glass rounded-3xl p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-100">Vitals</h2>
+              <button
+                onClick={onQuickCare}
+                disabled={!canAfford}
+                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+                  canAfford ? "bg-emerald-500/90 text-emerald-50 hover:bg-emerald-400" : "bg-slate-700 text-slate-500"
                 }`}
               >
-                {complete ? "🏆" : "✨"}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-slate-700">{achievement.name}</div>
-                <p className="text-sm text-slate-500">{achievement.description}</p>
-                <div className="mt-2 h-2 w-full rounded-full bg-slate-200">
-                  <div
-                    className={`h-2 rounded-full ${complete ? "bg-emerald-400" : "bg-rose-300"}`}
-                    style={{ width: `${(achievement.progress / achievement.goal) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+                Quick Care · 40 Credits
+              </button>
             </div>
-            <div className="mt-3 text-xs font-medium text-slate-500">
-              {achievement.progress}/{achievement.goal}
+            <div className="mt-4">
+              <StatBar label="Energy" value={stats.energy} tone="bg-emerald-400" />
+              <StatBar label="Cleanliness" value={stats.cleanliness} tone="bg-cyan-400" />
+              <StatBar label={`Morale (cap ${moraleCap})`} value={(stats.morale / moraleCap) * 100} tone="bg-amber-400" />
             </div>
           </div>
         );
       };
-      const CardPill = ({ card, count, onActivate }) => (
-        <div
-          className={`card-flip relative rounded-xl border-2 p-3 text-sm shadow-md ${RARITY_DATA[card.rarity].border} ${RARITY_DATA[card.rarity].color}`}
-        >
-          <div className="card-flip-inner">
-            <div className="card-face">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-slate-600">{card.rarity}</div>
-                  <div className="text-base font-bold text-slate-700">{card.name}</div>
-                </div>
-                <span className="text-xl">🐻</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">{card.effect}</p>
-              <div className="mt-1 text-xs text-slate-500">{card.lore}</div>
-              <div className="mt-3 flex items-center justify-between text-xs">
-                <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 font-semibold text-slate-600">
-                  {count} owned
-                </span>
-                <button
-                  className="rounded-full bg-rose-400 px-2 py-0.5 text-xs font-semibold text-white shadow"
-                  onClick={() => onActivate(card)}
-                >
-                  Power Up
-                </button>
-              </div>
+
+      const CurrencyPanel = ({ credits, vouchers }) => (
+        <div className="glass rounded-3xl p-6">
+          <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+            <span>Ledger</span>
+            <span>Reserves</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between text-lg font-semibold text-slate-100">
+              <span>Credits</span>
+              <span>{Math.round(credits)}</span>
             </div>
-            <div className="card-face card-face-back absolute inset-0 rounded-xl bg-white/90 p-3">
-              <p className="text-xs text-slate-600">
-                Power detail: {card.power?.uses ? `${card.power.uses} uses` : "Instant"}
-              </p>
-              <p className="mt-2 text-xs text-slate-500">Rarity multiplier ×{RARITY_DATA[card.rarity].multiplier}</p>
-              <p className="mt-2 text-xs text-slate-500">Essence value {essenceForCard(card.id)}</p>
+            <div className="flex items-center justify-between text-lg font-semibold text-slate-100">
+              <span>Vouchers</span>
+              <span>{Math.round(vouchers)}</span>
             </div>
           </div>
         </div>
       );
 
-      const LoveNoteCard = ({ note, onUpdate }) => {
-        const [isEditing, setIsEditing] = useState(false);
-        const [draft, setDraft] = useState(note.text);
-        return (
-          <div className="rounded-2xl border border-pink-200 bg-white/80 p-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-rose-500">{note.author}</div>
-                <div className="text-xs text-slate-400">{formatDate(note.createdAt)}</div>
+      const ContractPanel = ({ contract, onStart, onCancel }) => (
+        <div className="glass rounded-3xl p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-100">Contracts</h2>
+            {contract && (
+              <button onClick={onCancel} className="text-xs uppercase tracking-[0.3em] text-rose-300">
+                Cancel
+              </button>
+            )}
+          </div>
+          <div className="mt-4 space-y-4">
+            {CONFIG.CONTRACTS.map((job) => {
+              const active = contract && contract.id === job.id;
+              const remaining = active ? Math.max(0, contract.endsAt - now()) : 0;
+              const minutes = Math.ceil(remaining / 60000);
+              return (
+                <div key={job.id} className={`rounded-2xl border border-slate-600/40 p-4 ${active ? "bg-slate-800/60" : "bg-slate-900/40"}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-100">{job.label}</div>
+                      <div className="text-xs text-slate-400">Energy −{job.energyCost} · {job.durationMinutes}m</div>
+                    </div>
+                    <div className="text-sm font-semibold text-amber-300">+{job.payout} cr</div>
+                  </div>
+                  <div className="mt-2">
+                    {active ? (
+                      <div className="text-xs text-slate-400">{minutes} minutes remaining</div>
+                    ) : (
+                      <button
+                        onClick={() => onStart(job)}
+                        className="mt-2 rounded-full bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-200 hover:bg-slate-600"
+                      >
+                        Launch Contract
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+
+      const DecorOverlay = ({ decor, onMove, onSell }) => (
+        <div className="pointer-events-none absolute inset-0">
+          {decor.map((item) => (
+            <div
+              key={item.uid}
+              style={{ left: item.col * CONFIG.GRID.TILE, top: item.row * CONFIG.GRID.TILE, width: CONFIG.GRID.TILE, height: CONFIG.GRID.TILE }}
+              className="pointer-events-auto absolute"
+            >
+              <div className="absolute inset-x-6 top-3 flex items-center justify-between rounded-full bg-slate-900/70 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-slate-300 opacity-0 transition hover:opacity-100">
+                <button onPointerDown={(e) => { e.stopPropagation(); onMove(item); }} className="hover:text-emerald-200">
+                  Move
+                </button>
+                <span className="mx-1 text-slate-500">•</span>
+                <button onPointerDown={(e) => { e.stopPropagation(); onSell(item); }} className="hover:text-rose-300">
+                  Sell
+                </button>
               </div>
+            </div>
+          ))}
+        </div>
+      );
+      const DecorCatalog = ({ onBeginDrag }) => (
+        <div className="glass h-full rounded-3xl p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-100">Decor Catalog</h2>
+            <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Morale Caps</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {CONFIG.DECOR_CATALOG.map((item) => (
               <button
-                className="text-xs font-semibold text-rose-500 hover:text-rose-600"
-                onClick={() => setIsEditing((prev) => !prev)}
+                key={item.id}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  onBeginDrag({ ...item, uid: `decor-${item.id}-${Date.now()}`, isNew: true });
+                }}
+                className="flex w-full items-center justify-between rounded-2xl border border-slate-700/50 bg-slate-900/40 p-4 text-left transition hover:border-slate-500"
               >
-                {isEditing ? "Cancel" : "Edit"}
+                <div>
+                  <div className="text-sm font-semibold text-slate-100">{item.name}</div>
+                  <div className="text-xs text-slate-400">{item.note}</div>
+                </div>
+                <div className="text-sm font-semibold text-amber-300">{item.value} cr</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+
+      const PackButton = ({ pack, onOpen }) => (
+        <button
+          onClick={onOpen}
+          className="relative flex flex-col rounded-3xl border border-slate-600/40 bg-slate-900/50 p-6 text-left transition hover:border-slate-400"
+        >
+          <span className="text-xs uppercase tracking-[0.4em] text-slate-500">{pack.name}</span>
+          <span className="mt-2 text-2xl font-semibold text-slate-100">{pack.price} cr</span>
+          <span className="mt-3 text-xs text-slate-400">{pack.draws} cards · {pack.guaranteedAccessory ? "Accessory guaranteed" : "Accessory chance"}</span>
+        </button>
+      );
+
+      const PackReveal = ({ results, onClose }) => (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass pack-parallax relative w-full max-w-3xl rounded-3xl p-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-100">Pack Reveal</h2>
+              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                Close
               </button>
             </div>
-            {isEditing ? (
-              <div className="mt-3 space-y-2">
-                <textarea
-                  className="w-full rounded-xl border border-rose-200 bg-rose-50/70 p-2 text-sm"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                />
-                <button
-                  className="rounded-full bg-rose-400 px-3 py-1 text-xs font-semibold text-white"
-                  onClick={() => {
-                    onUpdate(draft);
-                    setIsEditing(false);
-                  }}
+            <div className="mt-8 flex flex-wrap justify-center gap-6">
+              {results.map((drop, index) => (
+                <div
+                  key={index}
+                  className={`card-shimmer relative h-48 w-32 overflow-hidden rounded-2xl border border-slate-500/40 ${
+                    drop.rarity === "Legendary"
+                      ? "rarity-legendary"
+                      : drop.rarity === "Epic"
+                      ? "rarity-epic"
+                      : drop.rarity === "Rare"
+                      ? "rarity-rare"
+                      : "rarity-common"
+                  }`}
                 >
-                  Save Love Note
-                </button>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-slate-600">{note.text}</p>
-            )}
-            {note.memory && (
-              <div className="mt-3 rounded-xl bg-rose-50 p-2 text-xs text-rose-500">
-                Memory: {note.memory}
-              </div>
-            )}
-          </div>
-        );
-      };
-
-      const QuestCard = ({ quest, onComplete }) => {
-        const [memoryText, setMemoryText] = useState("");
-        const [photoUrl, setPhotoUrl] = useState("");
-        useEffect(() => {
-          if (quest.completed) {
-            setMemoryText(quest.memory?.text || "");
-            setPhotoUrl(quest.memory?.photo || "");
-          }
-        }, [quest]);
-        return (
-          <div
-            className={`rounded-2xl border p-4 shadow-sm ${
-              quest.completed ? "bg-emerald-50 border-emerald-200" : "bg-white/80 border-slate-200"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-slate-700">{quest.title}</div>
-                <p className="text-xs text-slate-500">{quest.description}</p>
-              </div>
-              <span className="text-xs font-semibold text-rose-400">
-                {quest.rewardType} {quest.rewardAmount}
-              </span>
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5"></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center">
+                    <span className="text-xs uppercase tracking-[0.4em] text-slate-300">{drop.rarity}</span>
+                    {drop.type === "credit" ? (
+                      <>
+                        <span className="text-2xl font-semibold text-emerald-200">+{drop.credits}</span>
+                        <span className="text-xs text-slate-400">Credits</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm font-semibold text-slate-100">{drop.accessory.name}</span>
+                        <span className="text-xs text-slate-400">{drop.accessory.slot}</span>
+                        {drop.duplicate && <span className="mt-1 text-[10px] uppercase tracking-[0.3em] text-amber-300">Converted to vouchers</span>}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="mt-3 text-xs text-slate-500">Created {formatDate(quest.createdAt)}</div>
-            {quest.completed ? (
-              <div className="mt-3 space-y-2 text-sm text-emerald-600">
-                <div>Completed {formatDate(quest.completedAt)}</div>
-                {quest.memory?.text && (
-                  <div className="rounded-xl bg-white/70 p-2 text-emerald-500">Memory: {quest.memory.text}</div>
-                )}
-                {quest.memory?.photo && (
-                  <img src={quest.memory.photo} alt="Quest memory" className="h-32 w-full rounded-xl object-cover" />
-                )}
-              </div>
-            ) : (
-              <div className="mt-3 space-y-2 text-xs">
-                <textarea
-                  className="w-full rounded-xl border border-amber-200 bg-amber-50/60 p-2 text-xs"
-                  placeholder="Add memory text (optional)"
-                  value={memoryText}
-                  onChange={(e) => setMemoryText(e.target.value)}
-                />
-                <input
-                  className="w-full rounded-xl border border-amber-200 bg-white/80 p-2 text-xs"
-                  placeholder="Photo URL (optional)"
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                />
-                <button
-                  className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-white shadow"
-                  onClick={() => onComplete(quest.id, { text: memoryText, photo: photoUrl })}
-                >
-                  Complete Quest
-                </button>
-              </div>
-            )}
+          </div>
+        </div>
+      );
+      const AccessorySlot = ({ label, slot, equipped, inventory, onEquip }) => {
+        const current = equipped[slot];
+        return (
+          <div className="rounded-2xl border border-slate-700/40 bg-slate-900/40 p-4">
+            <div className="text-xs uppercase tracking-[0.3em] text-slate-500">{label}</div>
+            <div className="mt-2 text-sm font-semibold text-slate-100">{current ? current.name : "None"}</div>
+            <div className="mt-3 space-y-2">
+              {inventory
+                .filter((item) => item.slot === slot && item.quantity > 0)
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => onEquip(slot, item)}
+                    className={`flex w-full items-center justify-between rounded-full px-3 py-1 text-xs uppercase tracking-[0.3em] ${
+                      current && current.id === item.id ? "bg-emerald-500/30 text-emerald-100" : "bg-slate-800 text-slate-300"
+                    }`}
+                  >
+                    <span>{item.name}</span>
+                    <span className="text-[10px] text-slate-400">{item.rarity}</span>
+                  </button>
+                ))}
+            </div>
           </div>
         );
       };
-      const App = () => {
-        const [state, setState] = useState(() => applyDecay(loadState()));
-        const [ui, setUi] = useState({
-          toast: null,
-          packModal: null,
-          eventBanner: null,
-          heartAnimation: false,
-        });
-        const [verse, setVerse] = useState(() => DAILY_VERSES[loadState().dailyVerseIndex || 0]);
 
-        useEffect(() => {
-          const tick = setInterval(() => {
-            setState((prev) => applyDecay(prev));
-          }, 60000);
-          return () => clearInterval(tick);
-        }, []);
+      const WardrobeModal = ({ inventory, equipped, onClose, onEquip }) => (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+          <div className="glass relative w-full max-w-4xl rounded-3xl p-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-100">Wardrobe</h2>
+                <p className="text-xs text-slate-400">Tailor the bear's profile with understated accessories.</p>
+              </div>
+              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                Close
+              </button>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-5">
+              <AccessorySlot label="Head" slot="head" inventory={inventory} equipped={equipped} onEquip={onEquip} />
+              <AccessorySlot label="Neck" slot="neck" inventory={inventory} equipped={equipped} onEquip={onEquip} />
+              <AccessorySlot label="Body" slot="body" inventory={inventory} equipped={equipped} onEquip={onEquip} />
+              <AccessorySlot label="Paws" slot="paws" inventory={inventory} equipped={equipped} onEquip={onEquip} />
+              <AccessorySlot label="Colorway" slot="colorway" inventory={inventory} equipped={equipped} onEquip={onEquip} />
+            </div>
+          </div>
+        </div>
+      );
 
-        useEffect(() => {
-          saveState(state);
-        }, [state]);
+      const MilestonesPanel = ({ milestones, definitions, onClaim }) => (
+        <div className="glass rounded-3xl p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-100">Milestones</h2>
+            <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Progress</span>
+          </div>
+          <div className="mt-4 space-y-4">
+            {definitions.map((definition) => {
+              const record = milestones.find((entry) => entry.id === definition.id);
+              const achieved = record?.achieved;
+              const claimed = record?.claimed;
+              return (
+                <div key={definition.id} className="rounded-2xl border border-slate-600/40 bg-slate-900/40 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-100">{definition.name}</div>
+                      <div className="text-xs text-slate-400">{definition.description}</div>
+                    </div>
+                    <div className="text-xs text-amber-300">
+                      {definition.reward.credits ? `${definition.reward.credits} credits` : "Standard Pack"}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">Status: {achieved ? "Completed" : "In progress"}</div>
+                    {achieved && !claimed && (
+                      <button
+                        onClick={() => onClaim(definition)}
+                        className="rounded-full bg-emerald-500/70 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-50"
+                      >
+                        Claim
+                      </button>
+                    )}
+                    {claimed && <span className="text-xs text-slate-500">Claimed</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
 
-        useEffect(() => {
-          const today = new Date();
-          const triggeredEvent = state.events.find((event) => eventShouldTrigger(event, today));
-          if (triggeredEvent) {
-            setUi((prev) => ({
-              ...prev,
-              eventBanner: { ...triggeredEvent, year: today.getFullYear() },
-            }));
-            setState((prev) => ({
-              ...prev,
-              events: prev.events.map((event) =>
-                event.id === triggeredEvent.id ? { ...event, lastCelebratedYear: today.getFullYear() } : event
-              ),
-              coins: prev.coins + 100,
-              bearEssence: prev.bearEssence + 10,
-            }));
-          }
-        }, [state.events]);
-
-        useEffect(() => {
-          setVerse(DAILY_VERSES[state.dailyVerseIndex % DAILY_VERSES.length]);
-        }, [state.dailyVerseIndex]);
-
-        const updateState = (updater) => {
-          setState((prev) => {
-            const next = typeof updater === "function" ? updater(prev) : updater;
-            next.achievements = evaluateAchievements(next);
-            return next;
-          });
-        };
-
-        const themeStyle = useMemo(
-          () => ({
-            backgroundImage: state.den.backgroundImage ? `url(${state.den.backgroundImage})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            '--team-primary': state.den.themePrimary,
-            '--team-secondary': state.den.themeSecondary,
-          }),
-          [state.den.backgroundImage, state.den.themePrimary, state.den.themeSecondary]
+      const VerseDisplay = ({ show, verse }) => {
+        if (!show) return null;
+        return (
+          <div className="mt-4 rounded-2xl border border-slate-600/40 bg-slate-900/60 p-4 text-sm font-serif text-slate-200">
+            “{verse.text}” — {verse.ref} (KJV)
+          </div>
         );
+      };
+      const SideGigsPanel = ({ usage, onLaunch }) => {
+        const nowTime = now();
+        return (
+          <div className="glass rounded-3xl p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-100">Side Gigs</h2>
+              <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Mini-games</span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {CONFIG.MINI_GAMES.map((game) => {
+                const record = usage[game.id] || { history: [] };
+                const perHour = record.history.filter((stamp) => nowTime - stamp < 3600000).length;
+                const perDay = record.history.filter((stamp) => nowTime - stamp < 86400000).length;
+                const exhausted = game.disabled || perHour >= CONFIG.MINI_GAME_LIMITS.perHour || perDay >= CONFIG.MINI_GAME_LIMITS.perDay;
+                return (
+                  <div key={game.id} className="rounded-2xl border border-slate-700/40 bg-slate-900/40 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-100">{game.name}</div>
+                        <div className="text-xs text-slate-400">{game.description}</div>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {perHour}/{CONFIG.MINI_GAME_LIMITS.perHour} this hour · {perDay}/{CONFIG.MINI_GAME_LIMITS.perDay} today
+                      </div>
+                    </div>
+                    <button
+                      disabled={exhausted}
+                      onClick={() => onLaunch(game)}
+                      className={`mt-3 rounded-full px-3 py-1 text-xs uppercase tracking-[0.3em] ${
+                        exhausted ? "bg-slate-800 text-slate-600" : "bg-indigo-500/80 text-indigo-50 hover:bg-indigo-400"
+                      }`}
+                    >
+                      {game.disabled ? "In Development" : exhausted ? "Rest Required" : "Enter Gig"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      };
+      const ToastStack = ({ toasts, onDismiss }) => (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 flex w-full max-w-md -translate-x-1/2 flex-col gap-3">
+          {toasts.map((toast) => (
+            <div key={toast.id} className="toast-enter pointer-events-auto rounded-2xl bg-slate-900/90 px-4 py-3 text-sm text-slate-100 shadow-xl ring-1 ring-slate-700/50">
+              <div className="flex items-center justify-between">
+                <span>{toast.message}</span>
+                <button onClick={() => onDismiss(toast.id)} className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  Close
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+      const SettingsModal = ({ settings, onToggleVerse, onVolumeChange, onClose }) => (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+          <div className="glass w-full max-w-lg rounded-3xl p-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-100">Settings</h2>
+                <p className="text-xs text-slate-400">Dial the ambience and verse display.</p>
+              </div>
+              <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                Close
+              </button>
+            </div>
+            <div className="mt-6 space-y-6">
+              <label className="flex items-center justify-between text-sm text-slate-200">
+                <span>Show KJV verse overlay</span>
+                <input type="checkbox" checked={settings.showKJV} onChange={(event) => onToggleVerse(event.target.checked)} />
+              </label>
+              <div>
+                <div className="text-sm text-slate-200">Ambient volume</div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={settings.volume}
+                  onChange={(event) => onVolumeChange(parseFloat(event.target.value))}
+                  className="mt-2 w-full"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+      const MiniGameModal = ({ game, onComplete, onClose }) => {
+        const canvasRef = useRef(null);
+        const [uiState, setUiState] = useState({ time: CONFIG.MINI_GAME_LIMITS.durationSeconds, score: 0, detail: "" });
+        useEffect(() => {
+          if (!game || game.disabled) return;
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext("2d");
+          canvas.width = 500;
+          canvas.height = 320;
+          const duration = CONFIG.MINI_GAME_LIMITS.durationSeconds;
+          const start = performance.now();
+          let running = true;
+          const state = { score: 0, streak: 0, taps: [], beatIndex: 0, lane: 1, obstacles: [], pointer: 0, direction: 1 };
 
-        const levelProgress = useMemo(() => {
-          const needed = getXpForNextLevel(state.level);
-          return Math.min(100, Math.round((state.xp / needed) * 100));
-        }, [state.level, state.xp]);
+          const beatTimes = Array.from({ length: duration }, (_, i) => i + 1);
 
-        const highestJobRarity = useMemo(() => {
-          const passiveUnlock = PASSIVE_BONUSES[state.customBear.passiveBonus]?.unlockJobRarity;
-          const highestFromCards = highestRarityUnlocked(state);
-          if (!passiveUnlock) return highestFromCards;
-          return rarityToIndex(passiveUnlock) > rarityToIndex(highestFromCards) ? passiveUnlock : highestFromCards;
-        }, [state.discoveredCards, state.customBear.passiveBonus]);
-
-        const availableJobs = useMemo(() => {
-          const order = ["Common", "Uncommon", "Rare", "Epic", "Mythic"];
-          const unlockedIndex = order.indexOf(highestJobRarity);
-          return order
-            .slice(0, unlockedIndex + 1)
-            .flatMap((rarity) => JOB_DECK[rarity].map((job) => ({ ...job, rarity })));
-        }, [highestJobRarity]);
-
-        const addToast = (message, type = "info") => {
-          setUi((prev) => ({ ...prev, toast: { message, type, timestamp: Date.now() } }));
-          setTimeout(() => setUi((prev) => ({ ...prev, toast: null })), 4200);
-        };
-        const applyAction = (key) => {
-          const action = ACTION_DEFS[key];
-          if (!action) return;
-          updateState((prev) => {
-            let stats = { ...prev.stats };
-            Object.keys(action.stats || {}).forEach((stat) => {
-              stats[stat] = clampStat(stats[stat] + action.stats[stat]);
-            });
-
-            const passive = PASSIVE_BONUSES[prev.customBear.passiveBonus];
-            if (passive?.apply) {
-              stats = passive.apply(stats);
+          const handleTap = () => {
+            if (game.id === "timberline") {
+              const currentTime = (performance.now() - start) / 1000;
+              const nextBeat = beatTimes[state.beatIndex] || duration;
+              const delta = Math.abs(currentTime - nextBeat);
+              if (delta < 0.2) {
+                state.streak += 1;
+                state.score += 12 + state.streak * 2;
+                state.detail = "On beat";
+                state.beatIndex += 1;
+              } else if (delta < 0.4) {
+                state.streak = Math.max(0, state.streak - 1);
+                state.score += 6;
+                state.detail = "Close";
+                state.beatIndex += 1;
+              } else {
+                state.streak = 0;
+                state.detail = "Miss";
+              }
+            } else if (game.id === "riverside") {
+              const closeness = 1 - Math.abs(state.pointer - 0.5) * 2;
+              const haul = Math.max(0, closeness);
+              state.score += Math.round(haul * 35 + Math.random() * 20);
+              state.detail = haul > 0.75 ? "Golden catch" : haul > 0.4 ? "Solid pull" : "Light nibble";
             }
-            if (passive?.actionModifiers?.[key]) {
-              Object.entries(passive.actionModifiers[key]).forEach(([stat, amount]) => {
-                stats[stat] = clampStat(stats[stat] + amount);
+          };
+
+          const keyHandler = (event) => {
+            if (game.id === "courier") {
+              if (event.key === "ArrowLeft" || event.key === "a") {
+                state.lane = Math.max(0, state.lane - 1);
+              } else if (event.key === "ArrowRight" || event.key === "d") {
+                state.lane = Math.min(2, state.lane + 1);
+              }
+            }
+            if (event.key === " " || event.key === "Enter") {
+              handleTap();
+            }
+          };
+
+          const pointerHandler = () => handleTap();
+
+          window.addEventListener("keydown", keyHandler);
+          canvas.addEventListener("pointerdown", pointerHandler);
+
+          const spawnObstacle = () => {
+            const lane = Math.floor(Math.random() * 3);
+            state.obstacles.push({ lane, y: -40 });
+          };
+          let obstacleTimer = 0;
+
+          const loop = (timestamp) => {
+            if (!running) return;
+            const elapsed = (timestamp - start) / 1000;
+            const remaining = Math.max(0, duration - elapsed);
+            if (game.id === "riverside") {
+              state.pointer += state.direction * 0.008 * (1 + elapsed * 0.02);
+              if (state.pointer <= 0) {
+                state.pointer = 0;
+                state.direction = 1;
+              } else if (state.pointer >= 1) {
+                state.pointer = 1;
+                state.direction = -1;
+              }
+            }
+            if (game.id === "courier") {
+              obstacleTimer += 16;
+              if (obstacleTimer > 700) {
+                obstacleTimer = 0;
+                spawnObstacle();
+              }
+              state.obstacles.forEach((obstacle) => {
+                obstacle.y += 2.6 + elapsed * 0.01;
+              });
+              state.obstacles = state.obstacles.filter((obstacle) => obstacle.y < canvas.height + 40);
+              state.score += 0.6;
+              const collision = state.obstacles.find((obstacle) => obstacle.lane === state.lane && obstacle.y > 220 && obstacle.y < 260);
+              if (collision) {
+                state.score = Math.max(0, state.score - 40);
+                state.detail = "Glancing hit";
+                obstacle.y = canvas.height + 50;
+              }
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (game.id === "timberline") {
+              ctx.strokeStyle = "#334155";
+              ctx.lineWidth = 6;
+              ctx.beginPath();
+              ctx.arc(canvas.width / 2, canvas.height / 2, 90, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.fillStyle = "#38bdf8";
+              const beatProgress = (elapsed % 1);
+              ctx.beginPath();
+              ctx.arc(canvas.width / 2, canvas.height / 2, 90, -Math.PI / 2, -Math.PI / 2 + beatProgress * Math.PI * 2);
+              ctx.stroke();
+              ctx.fillStyle = "#fcd34d";
+              ctx.beginPath();
+              ctx.arc(canvas.width / 2, canvas.height / 2, 10 + 20 * (1 - beatProgress), 0, Math.PI * 2);
+              ctx.fill();
+            } else if (game.id === "riverside") {
+              ctx.fillStyle = "#1e293b";
+              ctx.fillRect(60, 120, canvas.width - 120, 80);
+              ctx.fillStyle = "#0ea5e9";
+              ctx.fillRect(60, 150, canvas.width - 120, 20);
+              ctx.fillStyle = "#fcd34d";
+              const pointerX = 60 + state.pointer * (canvas.width - 120);
+              ctx.fillRect(pointerX - 6, 110, 12, 100);
+              ctx.fillStyle = "rgba(148, 163, 184, 0.3)";
+              ctx.fillRect(canvas.width / 2 - 20, 120, 40, 80);
+            } else if (game.id === "courier") {
+              ctx.fillStyle = "#1e293b";
+              ctx.fillRect(140, 40, 220, 240);
+              ctx.strokeStyle = "#334155";
+              ctx.beginPath();
+              ctx.moveTo(213, 40);
+              ctx.lineTo(213, 280);
+              ctx.moveTo(287, 40);
+              ctx.lineTo(287, 280);
+              ctx.stroke();
+              ctx.fillStyle = "#38bdf8";
+              const laneX = [170, 244, 318][state.lane];
+              ctx.fillRect(laneX - 20, 220, 40, 40);
+              ctx.fillStyle = "#f87171";
+              state.obstacles.forEach((obstacle) => {
+                const ox = [170, 244, 318][obstacle.lane];
+                ctx.fillRect(ox - 18, obstacle.y, 36, 36);
               });
             }
 
-            let xpGain = action.xp || 0;
-            if (passive?.actionXp?.[key]) xpGain += passive.actionXp[key];
-            let coinGain = action.coins || 0;
-            if (passive?.coins) coinGain += passive.coins;
+            setUiState({ time: remaining, score: state.score, detail: state.detail || "" });
 
-            const now = Date.now();
-            const activeBoosts = prev.activePowerUps.filter((p) => !p.expires || p.expires > now);
-            activeBoosts.forEach((boost) => {
-              if (boost.power?.xpMultiplier) xpGain *= boost.power.xpMultiplier;
-              if (boost.power?.coinMultiplier) coinGain *= boost.power.coinMultiplier;
-              if (boost.power?.stat) {
-                stats[boost.power.stat] = clampStat(stats[boost.power.stat] + boost.power.amount);
-              }
-              if (boost.power?.allStats) {
-                Object.keys(stats).forEach((stat) => {
-                  stats[stat] = clampStat(stats[stat] + boost.power.allStats);
-                });
-              }
-              if (boost.power?.uses) {
-                boost.uses = (boost.uses || boost.power.uses) - 1;
-              }
-            });
-
-            const filteredBoosts = activeBoosts
-              .filter((boost) => !boost.power?.uses || boost.uses > 0)
-              .map((boost) => ({ ...boost }));
-
-            let xp = prev.xp + xpGain;
-            let level = prev.level;
-            let coins = prev.coins + Math.round(coinGain);
-            const xpHistory = [...prev.xpHistory];
-            let leveledUp = false;
-            while (xp >= getXpForNextLevel(level)) {
-              xp -= getXpForNextLevel(level);
-              level += 1;
-              leveledUp = true;
-              coins += 60;
+            if (remaining <= 0) {
+              running = false;
+              const normalized = Math.min(1, state.score / 300);
+              const reward = Math.round(lerp(game.minReward, game.maxReward, normalized));
+              window.removeEventListener("keydown", keyHandler);
+              canvas.removeEventListener("pointerdown", pointerHandler);
+              onComplete({ reward, score: Math.round(state.score) });
+              return;
             }
-            if (leveledUp) {
-              xpHistory.push({ level, time: now });
-              addToast(`Level up! You reached level ${level}! 🎉`, "success");
-            }
-
-            return {
-              ...prev,
-              stats,
-              xp,
-              level,
-              coins,
-              activePowerUps: filteredBoosts,
-              lastTick: now,
-            };
-          });
-        };
-
-        const openPack = () => {
-          if (state.coins < PACK_COST) {
-            addToast("Not enough coins for a card pack yet!", "warn");
-            return;
-          }
-          const cards = generatePackCards();
-          let essenceGain = 0;
-          const newlyDiscovered = [];
-          updateState((prev) => {
-            const collection = { ...prev.cardCollection };
-            const discovered = new Set(prev.discoveredCards);
-            cards.forEach((card) => {
-              const existing = collection[card.id] || { count: 0, firstDiscovered: Date.now() };
-              existing.count += 1;
-              if (existing.count > 1) {
-                essenceGain += essenceForCard(card.id);
-              }
-              collection[card.id] = existing;
-              if (!discovered.has(card.id)) {
-                discovered.add(card.id);
-                newlyDiscovered.push(card.id);
-              }
-            });
-            return {
-              ...prev,
-              coins: prev.coins - PACK_COST,
-              bearEssence: prev.bearEssence + essenceGain,
-              cardCollection: collection,
-              discoveredCards: Array.from(discovered),
-              packHistory: [
-                { id: `pack-${Date.now()}`, cards: cards.map((c) => c.id), time: Date.now(), essenceGain },
-                ...prev.packHistory.slice(0, 19),
-              ],
-            };
-          });
-          setUi((prev) => ({
-            ...prev,
-            packModal: { cards, essenceGain, newlyDiscovered },
-          }));
-        };
-
-        const activatePowerUp = (card) => {
-          if (!state.cardCollection[card.id]) {
-            addToast("Collect the card first!", "warn");
-            return;
-          }
-          const now = Date.now();
-          const duration = card.power?.durationMinutes ? card.power.durationMinutes * 60000 : null;
-          updateState((prev) => ({
-            ...prev,
-            activePowerUps: [
-              ...prev.activePowerUps,
-              {
-                cardId: card.id,
-                power: card.power,
-                activatedAt: now,
-                uses: card.power?.uses || null,
-                expires: duration ? now + duration : null,
-              },
-            ],
-          }));
-          addToast(`${card.name} power activated!`, "success");
-        };
-        const handleBearCustomization = (field, value) => {
-          updateState((prev) => ({
-            ...prev,
-            customBear: { ...prev.customBear, [field]: value },
-          }));
-        };
-
-        const handleDenCustomization = (field, value) => {
-          updateState((prev) => ({
-            ...prev,
-            den: { ...prev.den, [field]: value },
-          }));
-        };
-
-        const handleBackgroundUpload = (file) => {
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            handleDenCustomization("backgroundImage", e.target.result);
+            requestAnimationFrame(loop);
           };
-          reader.readAsDataURL(file);
-        };
+          requestAnimationFrame(loop);
+          return () => {
+            running = false;
+            window.removeEventListener("keydown", keyHandler);
+            canvas.removeEventListener("pointerdown", pointerHandler);
+          };
+        }, [game]);
 
-        const addQuest = (quest) => {
-          updateState((prev) => ({
-            ...prev,
-            sharedQuests: [
-              ...prev.sharedQuests,
-              {
-                ...quest,
-                id: `quest-${Date.now()}`,
-                createdAt: Date.now(),
-                completed: false,
-                memory: null,
-              },
-            ],
-          }));
+        if (!game) return null;
+        return (
+          <div className="mini-game-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+            <div className="glass w-full max-w-3xl rounded-3xl p-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-100">{game.name}</h2>
+                  <p className="text-xs text-slate-400">{game.description}</p>
+                </div>
+                <button onClick={onClose} className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  Exit
+                </button>
+              </div>
+              <div className="mt-6 flex flex-col items-center gap-4">
+                <canvas ref={canvasRef} className="bg-slate-950" width="500" height="320"></canvas>
+                <div className="flex w-full justify-between text-sm text-slate-300">
+                  <span>Time: {Math.ceil(uiState.time)}s</span>
+                  <span>Score: {Math.round(uiState.score)}</span>
+                  <span>{uiState.detail}</span>
+                </div>
+                <div className="text-xs text-slate-500">Tap / Space for Rhythm & Fishing · Arrow keys for Courier</div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+      const applyOfflineProgress = (state) => {
+        const current = now();
+        const elapsedMs = current - (state.lastTick || current);
+        if (elapsedMs <= 0) return state;
+        const minutes = elapsedMs / 60000;
+        const statDecay = state.contract && state.contract.endsAt && state.contract.endsAt > state.lastTick
+          ? CONFIG.STAT_DECAY_CONTRACT_PER_MIN
+          : CONFIG.STAT_DECAY_IDLE_PER_MIN;
+        const moraleCap = moraleMax(state.decor);
+        const adjustStat = (value, cap) => {
+          const factor = value >= CONFIG.STAT_DECAY_THRESHOLD ? CONFIG.STAT_DECAY_REDUCTION_FACTOR : 1;
+          const newValue = value + statDecay * minutes * factor;
+          return clamp(newValue, CONFIG.STAT_MIN, cap);
         };
+        state.stats.energy = adjustStat(state.stats.energy, CONFIG.BASE_STAT_MAX);
+        state.stats.cleanliness = adjustStat(state.stats.cleanliness, CONFIG.BASE_STAT_MAX);
+        state.stats.morale = adjustStat(state.stats.morale, moraleCap);
 
-        const completeQuest = (questId, memory) => {
-          updateState((prev) => {
-            const quests = prev.sharedQuests.map((quest) =>
-              quest.id === questId ? { ...quest, completed: true, completedAt: Date.now(), memory } : quest
-            );
-            const quest = prev.sharedQuests.find((q) => q.id === questId);
-            let coins = prev.coins;
-            let essence = prev.bearEssence;
-            if (quest?.rewardType === "coins") coins += quest.rewardAmount || 40;
-            if (quest?.rewardType === "essence") essence += quest.rewardAmount || 6;
-            if (quest?.rewardType === "memory") essence += 1;
-            if (prev.activePowerUps.some((p) => p.power?.questBonus && (!p.expires || p.expires > Date.now()))) {
-              coins += 20;
+        let contract = state.contract;
+        if (contract && contract.endsAt <= current) {
+          state.credits += contract.payout;
+          state.lifetime.creditsEarned += contract.payout;
+          state.lifetime.contractsCompleted += 1;
+          state.toast.push({ id: `contract-${contract.id}-${current}`, message: `${contract.label} complete · +${contract.payout} credits` });
+          contract = null;
+        }
+        state.contract = contract;
+
+        const allHealthy = state.stats.energy >= 70 && state.stats.cleanliness >= 70 && state.stats.morale >= 70;
+        if (allHealthy) {
+          state.lifetime.moraleAbove70Minutes += minutes;
+        }
+
+        const onDuty = state.stats.energy >= 60 && state.stats.cleanliness >= 60 && state.stats.morale >= 60;
+        if (onDuty) {
+          const rarityData = CONFIG.RARITIES[state.rarity] || CONFIG.RARITIES.Common;
+          let rate = 2 * rarityData.multiplier; // per minute
+          if (state.stats.energy < 40 || state.stats.cleanliness < 40 || state.stats.morale < 40) {
+            rate *= 0.75;
+          }
+          const earned = rate * minutes;
+          state.credits += earned;
+          state.lifetime.creditsEarned += earned;
+          state.lifetime.dutyMinutes += minutes;
+        }
+        state.lastTick = current;
+        state.milestones = updateMilestones(state);
+        return state;
+      };
+      const updateMilestones = (state) => {
+        return state.milestones.map((entry) => {
+          const definition = CONFIG.MILESTONES.find((m) => m.id === entry.id);
+          if (!definition) return entry;
+          if (entry.achieved) return entry;
+          let achieved = entry.achieved;
+          if (entry.id === "professional-i") {
+            achieved = state.lifetime.moraleAbove70Minutes >= 180;
+          } else if (entry.id === "craftsman") {
+            achieved = state.lifetime.contractsCompleted >= 5 && state.stats.morale >= 50;
+          } else if (entry.id === "steady-hand") {
+            achieved = state.lifetime.creditsEarned >= 10000;
+          }
+          return { ...entry, achieved };
+        });
+      };
+      const App = () => {
+        const [state, setState] = useState(() => applyOfflineProgress(loadState()));
+        const [packResults, setPackResults] = useState(null);
+        const [showWardrobe, setShowWardrobe] = useState(false);
+        const [showSettings, setShowSettings] = useState(false);
+        const [activeMiniGame, setActiveMiniGame] = useState(null);
+        const [dragPreview, setDragPreview] = useState(null);
+        const canvasRef = useRef(null);
+        const roomRef = useRef(null);
+        const busRef = useRef(new EventBus());
+        const stateRef = useRef(state);
+        const packEngineRef = useRef(null);
+        const audioContextRef = useRef(null);
+        const gainRef = useRef(null);
+
+        useEffect(() => {
+          stateRef.current = state;
+          saveState(state);
+          mirrorToFirebase(state);
+        }, [state]);
+
+        useEffect(() => {
+          if (!canvasRef.current) return;
+          roomRef.current = new RoomEngine(canvasRef.current, busRef.current);
+          return () => {
+            if (roomRef.current) roomRef.current.running = false;
+          };
+        }, []);
+
+        useEffect(() => {
+          if (roomRef.current) {
+            roomRef.current.setDecor(state.decor);
+          }
+        }, [state.decor]);
+
+        const equippedForRoom = useMemo(() => {
+          const payload = {};
+          Object.entries(state.accessories.equipped).forEach(([slot, item]) => {
+            if (item) payload[slot] = item;
+          });
+          return payload;
+        }, [state.accessories.equipped]);
+
+        useEffect(() => {
+          if (roomRef.current) {
+            roomRef.current.setAccessories(equippedForRoom);
+          }
+        }, [equippedForRoom]);
+
+        useEffect(() => {
+          packEngineRef.current = new PackEngine(stateRef, (newState) => setState({ ...newState }));
+        }, []);
+
+        const dragItemRef = useRef(null);
+
+        useEffect(() => {
+          const handlePointer = (point) => {
+            setDragPreview((prev) => (prev ? { ...prev, point } : prev));
+          };
+          const handleLeave = () => {
+            setDragPreview((prev) => (prev ? { ...prev, point: null } : prev));
+          };
+          const handleDrop = (tile) => {
+            if (!dragItemRef.current) return;
+            placeDecorAt(tile, dragItemRef.current);
+            dragItemRef.current = null;
+            setDragPreview(null);
+          };
+          const bus = busRef.current;
+          bus.on("room-pointer", handlePointer);
+          bus.on("room-pointer-leave", handleLeave);
+          bus.on("room-pointer-up", handleDrop);
+          return () => {
+            bus.off("room-pointer", handlePointer);
+            bus.off("room-pointer-leave", handleLeave);
+            bus.off("room-pointer-up", handleDrop);
+          };
+        }, []);
+
+        const placeDecorAt = (tile, item) => {
+          setState((prev) => {
+            if (item.isNew && prev.credits < item.value) {
+              return prev;
             }
-            const memoryEntry = memory?.text
-              ? [
-                  {
-                    id: `memory-${Date.now()}`,
-                    text: memory.text,
-                    photo: memory.photo,
-                    createdAt: Date.now(),
-                    questTitle: quest?.title,
-                  },
-                  ...prev.denMemories,
-                ]
-              : prev.denMemories;
+            const existing = prev.decor.filter((decor) => decor.uid !== item.uid);
+            const updated = [
+              ...existing,
+              {
+                uid: item.uid,
+                id: item.id,
+                name: item.name,
+                tint: item.tint,
+                moraleCap: item.moraleCap,
+                value: item.value,
+                col: tile.col,
+                row: tile.row,
+              },
+            ];
             return {
               ...prev,
-              sharedQuests: quests,
-              coins,
-              bearEssence: essence,
-              denMemories: memoryEntry,
-              completedQuestCount: prev.completedQuestCount + 1,
+              credits: item.isNew ? prev.credits - item.value : prev.credits,
+              decor: updated,
             };
           });
-          addToast("Quest completed together!", "success");
         };
 
-        const addLoveNote = (note) => {
-          updateState((prev) => ({
-            ...prev,
-            loveNotes: [
-              {
-                id: `note-${Date.now()}`,
-                createdAt: Date.now(),
-                ...note,
+        const beginDecorDrag = (item) => {
+          dragItemRef.current = item;
+          setDragPreview({ ...item, point: null });
+        };
+
+        const moveDecor = (item) => {
+          dragItemRef.current = { ...item, isNew: false };
+          setDragPreview({ ...item, point: null });
+          setState((prev) => ({ ...prev, decor: prev.decor.filter((decor) => decor.uid !== item.uid) }));
+        };
+
+        const sellDecor = (item) => {
+          setState((prev) => {
+            const updated = prev.decor.filter((decor) => decor.uid !== item.uid);
+            return { ...prev, decor: updated, credits: prev.credits + Math.floor(item.value * 0.6) };
+          });
+        };
+
+        const handleQuickCare = () => {
+          setState((prev) => {
+            if (prev.credits < CONFIG.QUICK_CARE_COST) return prev;
+            const moraleCap = moraleMax(prev.decor);
+            return {
+              ...prev,
+              credits: prev.credits - CONFIG.QUICK_CARE_COST,
+              stats: {
+                energy: clamp(prev.stats.energy + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
+                cleanliness: clamp(prev.stats.cleanliness + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
+                morale: clamp(prev.stats.morale + CONFIG.QUICK_CARE_BOOST, CONFIG.STAT_MIN, moraleCap),
               },
-              ...prev.loveNotes,
-            ],
-            secretFlags: detectEasterEggs(note.text, prev),
-          }));
-          if (note.text.toLowerCase().includes("heart")) {
-            setUi((prev) => ({ ...prev, heartAnimation: true }));
-            setTimeout(() => setUi((prev) => ({ ...prev, heartAnimation: false })), 3200);
+            };
+          });
+        };
+
+        const handleContractStart = (job) => {
+          setState((prev) => {
+            if (prev.contract) return prev;
+            const moraleCap = moraleMax(prev.decor);
+            return {
+              ...prev,
+              contract: {
+                ...job,
+                startedAt: now(),
+                endsAt: now() + job.durationMinutes * 60000,
+              },
+              stats: {
+                ...prev.stats,
+                energy: clamp(prev.stats.energy - job.energyCost, CONFIG.STAT_MIN, CONFIG.BASE_STAT_MAX),
+              },
+            };
+          });
+        };
+
+        const handleContractCancel = () => {
+          setState((prev) => ({ ...prev, contract: null }));
+        };
+
+        const handlePackOpen = (key) => {
+          const engine = packEngineRef.current;
+          if (!engine) return;
+          const results = engine.openPack(key);
+          if (results.length) {
+            setPackResults(results);
           }
         };
 
-        const updateLoveNote = (noteId, text) => {
-          updateState((prev) => ({
-            ...prev,
-            loveNotes: prev.loveNotes.map((note) =>
-              note.id === noteId ? { ...note, text, updatedAt: Date.now() } : note
-            ),
-            secretFlags: detectEasterEggs(text, prev),
-          }));
-        };
-
-        const assignJob = (jobId) => {
-          updateState((prev) => ({
-            ...prev,
-            job: { ...prev.job, currentJobId: jobId },
-          }));
-        };
-
-        const performShift = () => {
-          const job = availableJobs.find((job) => job.id === state.job.currentJobId);
-          if (!job) {
-            addToast("Pick a job first!", "warn");
-            return;
-          }
-          const now = Date.now();
-          updateState((prev) => {
-            let pay = job.pay;
-            const activeBoost = prev.activePowerUps.find((p) => p.power?.coinMultiplier && (!p.expires || p.expires > now));
-            if (activeBoost) {
-              pay *= activeBoost.power.coinMultiplier;
-              if (activeBoost.power?.uses) activeBoost.uses -= 1;
-            }
-            const rarityBonus = RARITY_DATA[job.rarity]?.multiplier || 1;
-            pay = Math.round(pay * rarityBonus);
-            return {
-              ...prev,
-              coins: prev.coins + pay,
-              job: {
-                ...prev.job,
-                lastShift: now,
-                jobHistory: [
-                  { id: `shift-${now}`, jobId: job.id, pay, time: now },
-                  ...prev.job.jobHistory.slice(0, 14),
-                ],
-              },
-            };
-          });
-          addToast(`Shift complete! Earned ${job.pay}× bonus coins!`, "success");
-        };
-
-        const cycleVerse = () => {
-          const nextIndex = (state.dailyVerseIndex + 1) % DAILY_VERSES.length;
+        const handleEquip = (slot, item) => {
           setState((prev) => ({
             ...prev,
-            dailyVerseIndex: nextIndex,
+            accessories: {
+              ...prev.accessories,
+              equipped: { ...prev.accessories.equipped, [slot]: item },
+            },
           }));
         };
 
-        const addEvent = (event) => {
-          updateState((prev) => ({
+        const handleMilestoneClaim = (definition) => {
+          setState((prev) => {
+            const milestones = prev.milestones.map((entry) =>
+              entry.id === definition.id ? { ...entry, claimed: true } : entry
+            );
+            const updates = { ...prev, milestones };
+            if (definition.reward.credits) {
+              updates.credits += definition.reward.credits;
+            } else if (definition.reward.pack) {
+              const packKey = definition.reward.pack;
+              updates.packs = { ...prev.packs, [packKey]: (prev.packs[packKey] || 0) + 1 };
+            }
+            return updates;
+          });
+        };
+
+        const dismissToast = (id) => {
+          setState((prev) => ({ ...prev, toast: prev.toast.filter((toast) => toast.id !== id) }));
+        };
+
+        useEffect(() => {
+          if (!state.toast.length) return;
+          const timer = setTimeout(() => {
+            setState((prev) => ({ ...prev, toast: prev.toast.slice(1) }));
+          }, 4800);
+          return () => clearTimeout(timer);
+        }, [state.toast]);
+
+        useEffect(() => {
+          const timer = setInterval(() => {
+            setState((prev) => {
+              const moraleCap = moraleMax(prev.decor);
+              const baseDecay = prev.contract ? CONFIG.STAT_DECAY_CONTRACT_PER_MIN : CONFIG.STAT_DECAY_IDLE_PER_MIN;
+              const decayStep = baseDecay / 60; // per minute to per second
+              const applyDecay = (value, cap) => {
+                const factor = value >= CONFIG.STAT_DECAY_THRESHOLD ? CONFIG.STAT_DECAY_REDUCTION_FACTOR : 1;
+                return clamp(value + decayStep * factor, CONFIG.STAT_MIN, cap);
+              };
+              const stats = {
+                energy: applyDecay(prev.stats.energy, CONFIG.BASE_STAT_MAX),
+                cleanliness: applyDecay(prev.stats.cleanliness, CONFIG.BASE_STAT_MAX),
+                morale: applyDecay(prev.stats.morale, moraleCap),
+              };
+              const rarityData = CONFIG.RARITIES[prev.rarity] || CONFIG.RARITIES.Common;
+              let credits = prev.credits;
+              let dutyMinutes = prev.lifetime.dutyMinutes;
+              let creditsEarned = prev.lifetime.creditsEarned;
+              if (stats.energy >= 60 && stats.cleanliness >= 60 && stats.morale >= 60) {
+                let perMinute = 2 * rarityData.multiplier;
+                if (stats.energy < 40 || stats.cleanliness < 40 || stats.morale < 40) perMinute *= 0.75;
+                const perSecond = perMinute / 60;
+                credits += perSecond;
+                creditsEarned += perSecond;
+                dutyMinutes += 1 / 60;
+              }
+              const lifetime = {
+                ...prev.lifetime,
+                creditsEarned,
+                dutyMinutes,
+                moraleAbove70Minutes:
+                  stats.energy >= 70 && stats.cleanliness >= 70 && stats.morale >= 70
+                    ? prev.lifetime.moraleAbove70Minutes + 1 / 60
+                    : prev.lifetime.moraleAbove70Minutes,
+                contractsCompleted: prev.lifetime.contractsCompleted,
+              };
+              const contract = prev.contract && prev.contract.endsAt <= now() ? null : prev.contract;
+              const toast = [...prev.toast];
+              if (prev.contract && prev.contract.endsAt <= now()) {
+                credits += prev.contract.payout;
+                creditsEarned += prev.contract.payout;
+                lifetime.creditsEarned = creditsEarned;
+                lifetime.contractsCompleted = prev.lifetime.contractsCompleted + 1;
+                toast.push({ id: `contract-${prev.contract.id}-${now()}`, message: `${prev.contract.label} complete · +${prev.contract.payout} credits` });
+              }
+              const milestones = updateMilestones({ ...prev, stats, lifetime });
+              return { ...prev, stats, credits, lifetime, contract, toast, milestones, lastTick: now() };
+            });
+          }, 1000);
+          return () => clearInterval(timer);
+        }, []);
+
+        useEffect(() => {
+          if (state.settings.volume <= 0) return;
+          if (!audioContextRef.current) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const context = new AudioContext();
+            const gain = context.createGain();
+            const oscillator = context.createOscillator();
+            oscillator.type = "sine";
+            oscillator.frequency.value = 92;
+            const lfo = context.createOscillator();
+            lfo.type = "sine";
+            lfo.frequency.value = 0.1;
+            const lfoGain = context.createGain();
+            lfoGain.gain.value = 30;
+            lfo.connect(lfoGain).connect(oscillator.frequency);
+            gain.gain.value = state.settings.volume * 0.08;
+            oscillator.connect(gain).connect(context.destination);
+            oscillator.start();
+            lfo.start();
+            audioContextRef.current = context;
+            gainRef.current = gain;
+            const resume = () => {
+              if (context.state === "suspended") context.resume();
+            };
+            window.addEventListener("pointerdown", resume, { once: true });
+          } else if (gainRef.current) {
+            gainRef.current.gain.value = state.settings.volume * 0.08;
+          }
+        }, [state.settings.volume]);
+
+        const handleMiniGameLaunch = (game) => {
+          if (game.disabled) return;
+          const usage = state.miniGameUsage[game.id] || { history: [] };
+          const recent = usage.history || [];
+          const perHour = recent.filter((stamp) => now() - stamp < 3600000).length;
+          const perDay = recent.filter((stamp) => now() - stamp < 86400000).length;
+          if (perHour >= CONFIG.MINI_GAME_LIMITS.perHour || perDay >= CONFIG.MINI_GAME_LIMITS.perDay) {
+            setState((prev) => ({
+              ...prev,
+              toast: [
+                ...prev.toast,
+                {
+                  id: `gig-limit-${game.id}-${now()}`,
+                  message: `${game.name} · rest before the next attempt`,
+                },
+              ],
+            }));
+            return;
+          }
+          setActiveMiniGame(game);
+        };
+
+        const handleMiniGameComplete = ({ reward, score }) => {
+          const completedGame = activeMiniGame;
+          setActiveMiniGame(null);
+          setState((prev) => {
+            if (!completedGame) return prev;
+            const usage = { ...prev.miniGameUsage };
+            const history = usage[completedGame.id]?.history || [];
+            const updatedHistory = [...history.filter((stamp) => now() - stamp < 86400000), now()];
+            usage[completedGame.id] = { history: updatedHistory };
+            const toast = [...prev.toast, { id: `gig-${completedGame.id}-${now()}`, message: `${completedGame.name} · ${Math.round(score)} pts · +${reward} credits` }];
+            return {
+              ...prev,
+              credits: prev.credits + reward,
+              lifetime: { ...prev.lifetime, creditsEarned: prev.lifetime.creditsEarned + reward },
+              miniGameUsage: usage,
+              toast,
+            };
+          });
+        };
+
+        const toggleVerse = (value) => {
+          setState((prev) => ({
             ...prev,
-            events: [
-              ...prev.events,
-              { ...event, id: `event-${Date.now()}`, lastCelebratedYear: null },
-            ],
+            settings: { ...prev.settings, showKJV: value },
+            verseIndex: value ? (prev.verseIndex + 1) % CONFIG.KJV_VERSES.length : prev.verseIndex,
           }));
         };
 
-        const updateFirebaseConfig = (value) => {
-          updateState((prev) => ({
-            ...prev,
-            firebaseConfig: value,
-          }));
+        const handleVolume = (value) => {
+          setState((prev) => ({ ...prev, settings: { ...prev.settings, volume: value } }));
         };
-        const hearts = ui.heartAnimation
-          ? Array.from({ length: 12 }).map((_, index) => (
-              <span
-                key={index}
-                className="heart-particle absolute text-rose-400"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 1.6}s`,
-                  fontSize: `${Math.random() * 16 + 16}px`,
-                }}
-              >
-                ❤
-              </span>
-            ))
-          : null;
 
-        const packModal = ui.packModal ? (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 backdrop-blur">
-            <div className="relative w-full max-w-3xl rounded-3xl bg-white/90 p-6 shadow-2xl">
-              <button
-                className="absolute right-5 top-5 text-sm font-semibold text-slate-400 hover:text-slate-600"
-                onClick={() => setUi((prev) => ({ ...prev, packModal: null }))}
-              >
-                Close
-              </button>
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-700">Pack Opening!</h2>
-                <p className="text-sm text-slate-500">Collectible cards bloom before your eyes.</p>
+        const verse = CONFIG.KJV_VERSES[state.verseIndex % CONFIG.KJV_VERSES.length];
+
+        const activeContract = state.contract;
+
+        return (
+          <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10">
+            <header className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-semibold text-slate-100">Team Bear · Studio Loop</h1>
+                <p className="text-sm text-slate-400">Maintain a composed bear, manage credits, and unlock composed milestones.</p>
               </div>
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                {ui.packModal.cards.map((card) => (
-                  <div key={card.id} className="relative">
-                    <div className="absolute inset-0 animate-[pack-sparkle_2.6s_ease-in-out_infinite] rounded-2xl bg-gradient-to-br from-white/20 via-transparent to-white/40"></div>
-                    <CardPill
-                      card={card}
-                      count={state.cardCollection[card.id]?.count || 1}
-                      onActivate={() => {}}
-                    />
-                    {ui.packModal.newlyDiscovered.includes(card.id) && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-white shadow">
-                        New!
-                      </span>
-                    )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowWardrobe(true)}
+                  className="rounded-full border border-slate-600/40 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 hover:border-slate-400"
+                >
+                  Wardrobe
+                </button>
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="rounded-full border border-slate-600/40 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 hover:border-slate-400"
+                >
+                  Settings
+                </button>
+              </div>
+            </header>
+
+            <main className="grid grid-cols-1 gap-8 lg:grid-cols-[2fr,1fr]">
+              <div className="glass relative rounded-3xl p-6">
+                <div className="overflow-hidden rounded-3xl border border-slate-600/30 bg-slate-950/60 p-4">
+                  <div className="mx-auto w-[768px] max-w-full">
+                    <div className="relative" style={{ padding: `${CONFIG.ROOM_PADDING}px` }}>
+                      <canvas ref={canvasRef} className="room-grid-shadow w-full" style={{ aspectRatio: `${CONFIG.GRID.COLS} / ${CONFIG.GRID.ROWS}` }}></canvas>
+                      <DecorOverlay decor={state.decor} onMove={moveDecor} onSell={sellDecor} />
+                      {dragPreview && dragPreview.point && (
+                        <div
+                          className="pointer-events-none absolute h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/60 bg-emerald-400/20"
+                          style={{ left: dragPreview.point.x, top: dragPreview.point.y }}
+                        ></div>
+                      )}
+                    </div>
                   </div>
+                </div>
+                <VerseDisplay show={state.settings.showKJV} verse={verse} />
+              </div>
+              <div className="space-y-6">
+                <StatsPanel stats={state.stats} decor={state.decor} onQuickCare={handleQuickCare} canAfford={state.credits >= CONFIG.QUICK_CARE_COST} />
+                <CurrencyPanel credits={state.credits} vouchers={state.vouchers} />
+                <ContractPanel contract={activeContract} onStart={handleContractStart} onCancel={handleContractCancel} />
+              </div>
+            </main>
+
+            <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <DecorCatalog onBeginDrag={beginDecorDrag} />
+              <SideGigsPanel usage={state.miniGameUsage} onLaunch={handleMiniGameLaunch} />
+              <MilestonesPanel milestones={state.milestones} definitions={CONFIG.MILESTONES} onClaim={handleMilestoneClaim} />
+            </section>
+
+            <section className="glass rounded-3xl p-6">
+              <h2 className="text-lg font-semibold text-slate-100">Packs</h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                {Object.entries(CONFIG.PACK_TYPES).map(([key, pack]) => (
+                  <PackButton key={key} pack={pack} onOpen={() => handlePackOpen(key)} />
                 ))}
               </div>
-              <div className="mt-6 rounded-2xl bg-rose-50 p-4 text-center text-sm text-rose-500">
-                Essence gained: {ui.packModal.essenceGain}
-              </div>
-            </div>
-          </div>
-        ) : null;
+            </section>
 
-        const eventBanner = ui.eventBanner ? (
-          <div className={`rounded-3xl border border-amber-300 ${ui.eventBanner.theme} p-5 text-center text-slate-700`}>
-            <div className="text-sm font-semibold uppercase tracking-wide text-amber-600">Special Day!</div>
-            <div className="mt-1 text-xl font-bold">{ui.eventBanner.name}</div>
-            <p className="text-sm text-slate-600">{ui.eventBanner.scene}</p>
-            <p className="mt-3 text-sm text-amber-600">Bonus 100 coins + 10 Bear Essence gifted to celebrate.</p>
-          </div>
-        ) : null;
-        return (
-          <div className="relative min-h-screen bg-gradient-to-br from-white/70 via-white/30 to-white/60" style={themeStyle}>
-            {hearts && <div className="pointer-events-none absolute inset-0 overflow-hidden">{hearts}</div>}
-            <div className="relative mx-auto flex max-w-7xl flex-col gap-10 p-6 text-slate-700">
-              <header className="rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h1 className="text-3xl font-black text-slate-800" style={{ color: state.den.themePrimary }}>
-                      {state.den.denName}
-                    </h1>
-                    <p className="text-sm text-slate-500">{state.den.motto}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
-                    <div className="rounded-2xl bg-rose-100 px-4 py-2 text-rose-500">Coins: {state.coins}</div>
-                    <div className="rounded-2xl bg-indigo-100 px-4 py-2 text-indigo-500">Bear Essence: {state.bearEssence}</div>
-                    <div className="rounded-2xl bg-emerald-100 px-4 py-2 text-emerald-500">Level {state.level}</div>
-                  </div>
-                </div>
-                {eventBanner && <div className="mt-6">{eventBanner}</div>}
-              </header>
-
-              <section className="grid gap-6 lg:grid-cols-3">
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-700">Gabe and Savannah's Bear Game Stats</h2>
-                      <p className="text-xs text-slate-400">Keep Honey happy and thriving.</p>
-                    </div>
-                    <div className="h-16 w-16 rounded-full border-4 border-white bg-gradient-to-br from-amber-200 to-rose-200 p-1">
-                      <div
-                        className="flex h-full w-full items-center justify-center rounded-full text-3xl"
-                        style={{ backgroundColor: state.customBear.furColor }}
-                      >
-                        🐻
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <StatBar label="Hunger" value={state.stats.hunger} color="bg-amber-400" />
-                    <StatBar label="Energy" value={state.stats.energy} color="bg-indigo-400" />
-                    <StatBar label="Cleanliness" value={state.stats.cleanliness} color="bg-sky-400" />
-                    <StatBar label="Happiness" value={state.stats.happiness} color="bg-rose-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                      <span>XP Progress</span>
-                      <span>
-                        {state.xp}/{getXpForNextLevel(state.level)}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-3 rounded-full bg-slate-200">
-                      <div className="h-3 rounded-full bg-gradient-to-r from-rose-400 to-amber-400" style={{ width: `${levelProgress}%` }}></div>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {Object.keys(ACTION_DEFS).map((key) => (
-                      <button
-                        key={key}
-                        onClick={() => applyAction(key)}
-                        className={`action-button group rounded-2xl bg-gradient-to-r ${ACTION_DEFS[key].color} px-4 py-3 text-left font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl`}
-                      >
-                        <div>{ACTION_DEFS[key].label}</div>
-                        <div className="text-xs font-normal opacity-80">+{ACTION_DEFS[key].xp} XP · +{ACTION_DEFS[key].coins} coins</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold text-slate-700">Card Collection</h2>
-                      <p className="text-xs text-slate-400">Open packs to discover new bear cards.</p>
-                    </div>
-                    <button
-                      onClick={openPack}
-                      className="rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-4 py-2 text-sm font-semibold text-white shadow hover:shadow-lg"
-                    >
-                      Buy Pack ({PACK_COST} coins)
-                    </button>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {CARD_LIBRARY.map((card) => {
-                      const count = state.cardCollection[card.id]?.count || 0;
-                      return count ? (
-                        <CardPill key={card.id} card={card} count={count} onActivate={activatePowerUp} />
-                      ) : (
-                        <div
-                          key={card.id}
-                          className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-xs text-slate-400"
-                        >
-                          <span className="text-2xl">❔</span>
-                          <span>{card.rarity} card</span>
-                          <span>Undiscovered</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="rounded-2xl bg-slate-50/80 p-4 text-sm text-slate-600">
-                    <div className="font-semibold text-slate-700">Active Power-Ups</div>
-                    <div className="mt-2 space-y-2">
-                      {state.activePowerUps.length === 0 ? (
-                        <p className="text-xs text-slate-400">
-                          No power-ups active. Tap a collected card to empower your next adventures.
-                        </p>
-                      ) : (
-                        state.activePowerUps.map((power) => {
-                          const card = CARD_LIBRARY.find((c) => c.id === power.cardId);
-                          return (
-                            <div key={power.cardId} className="rounded-xl bg-white/70 p-3 text-xs">
-                              <div className="font-semibold text-slate-600">{card?.name}</div>
-                              <div className="text-slate-500">{card?.effect}</div>
-                              {power.uses && <div>Uses left: {power.uses}</div>}
-                              {power.expires && (
-                                <div className="text-[10px] text-slate-400">
-                                  Expires {new Date(power.expires).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-rose-50/80 p-4 text-sm text-rose-500">
-                    <div className="font-semibold text-rose-500">Essence Ledger</div>
-                    <p className="text-xs text-rose-400">
-                      Duplicated cards automatically become Bear Essence. Use essence for future upgrades & shared memories.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-700">Achievement Showcase</h2>
-                    <p className="text-xs text-slate-400">Celebrate milestones in your evolution.</p>
-                    <div className="mt-4 space-y-3 max-h-72 overflow-y-auto pr-2">
-                      {state.achievements.map((achievement) => (
-                        <AchievementBadge key={achievement.id} achievement={achievement} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-indigo-50/80 p-4 text-sm text-indigo-500">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-indigo-600">Adult Stage Jobs</div>
-                        <p className="text-xs text-indigo-400">
-                          Rarity-based jobs unlock with rarer cards. Pay scales with job rarity.
-                        </p>
-                      </div>
-                      <span className="text-2xl">💼</span>
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      <select
-                        value={state.job.currentJobId || ''}
-                        onChange={(e) => assignJob(e.target.value)}
-                        className="w-full rounded-xl border border-indigo-200 bg-white/80 p-2 text-xs"
-                      >
-                        <option value="">Select a job</option>
-                        {availableJobs.map((job) => (
-                          <option key={job.id} value={job.id}>
-                            [{job.rarity}] {job.title} · {job.pay} coins
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={performShift}
-                        className="w-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-400 px-4 py-2 text-xs font-semibold text-white shadow"
-                      >
-                        Work a Shift
-                      </button>
-                      <div className="text-[11px] text-indigo-400">
-                        Last shift: {state.job.lastShift ? new Date(state.job.lastShift).toLocaleString() : '—'}
-                      </div>
-                      <div className="max-h-32 overflow-y-auto rounded-xl bg-white/70 p-2 text-[11px] text-slate-500">
-                        {state.job.jobHistory.length === 0 ? (
-                          <div>No shifts yet. Activate jobs to earn coins!</div>
-                        ) : (
-                          state.job.jobHistory.map((shift) => (
-                            <div key={shift.id} className="flex justify-between">
-                              <span>{new Date(shift.time).toLocaleDateString()}</span>
-                              <span>{shift.pay} coins</span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-emerald-50/80 p-4 text-sm text-emerald-500">
-                    <div className="font-semibold text-emerald-600">Easter Egg Tracker</div>
-                    <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">
-                      <li className={state.secretFlags.heartStorm ? 'text-emerald-500' : 'text-slate-400'}>
-                        Heartstorm unlocked: {state.secretFlags.heartStorm ? 'Yes' : 'Not yet'}
-                      </li>
-                      <li className={state.secretFlags.hiddenMessageFound ? 'text-emerald-500' : 'text-slate-400'}>
-                        Hidden message found: {state.secretFlags.hiddenMessageFound ? 'Yes' : 'Listen for whispers'}
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </section>
-              <section className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Den Customization</h2>
-                  <p className="text-xs text-slate-400">Name your shared den, set colors, and upload a cozy background.</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="text-xs font-semibold text-slate-500">
-                      Den Name
-                      <input
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                        value={state.den.denName}
-                        onChange={(e) => handleDenCustomization('denName', e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Motto
-                      <input
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                        value={state.den.motto}
-                        onChange={(e) => handleDenCustomization('motto', e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Theme Primary
-                      <input
-                        type="color"
-                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
-                        value={state.den.themePrimary}
-                        onChange={(e) => handleDenCustomization('themePrimary', e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Theme Secondary
-                      <input
-                        type="color"
-                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
-                        value={state.den.themeSecondary}
-                        onChange={(e) => handleDenCustomization('themeSecondary', e.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <label className="text-xs font-semibold text-slate-500">
-                    Den Background (optional)
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                      onChange={(e) => handleBackgroundUpload(e.target.files?.[0])}
-                    />
-                  </label>
-                  {state.den.backgroundImage && (
-                    <div className="overflow-hidden rounded-2xl border border-slate-200">
-                      <img src={state.den.backgroundImage} alt="Den background" className="h-40 w-full object-cover" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Custom Bear Creator</h2>
-                  <p className="text-xs text-slate-400">Build your shared avatar with love-powered passives.</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="text-xs font-semibold text-slate-500">
-                      Bear Name
-                      <input
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                        value={state.customBear.name}
-                        onChange={(e) => handleBearCustomization('name', e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Fur Color
-                      <input
-                        type="color"
-                        className="mt-1 h-10 w-full rounded-xl border border-slate-200"
-                        value={state.customBear.furColor}
-                        onChange={(e) => handleBearCustomization('furColor', e.target.value)}
-                      />
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Accessory
-                      <select
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                        value={state.customBear.accessory}
-                        onChange={(e) => handleBearCustomization('accessory', e.target.value)}
-                      >
-                        {['Flower Crown', 'Adventurer Hat', 'Starry Scarf', 'Scholar Glasses', 'Heart Bandana'].map((item) => (
-                          <option key={item}>{item}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-xs font-semibold text-slate-500">
-                      Passive Bonus
-                      <select
-                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2 text-sm"
-                        value={state.customBear.passiveBonus}
-                        onChange={(e) => handleBearCustomization('passiveBonus', e.target.value)}
-                      >
-                        {Object.keys(PASSIVE_BONUSES).map((bonus) => (
-                          <option key={bonus}>{bonus}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <div className="rounded-2xl bg-rose-50/70 p-4 text-xs text-rose-500">
-                    Passive effect: {PASSIVE_BONUSES[state.customBear.passiveBonus]?.description}
-                  </div>
-                </div>
-              </section>
-              <section className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Shared Quest Board</h2>
-                  <p className="text-xs text-slate-400">Write couple goals, then capture memories when you complete them.</p>
-                  <form
-                    className="space-y-3 rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.target);
-                      const title = formData.get('title');
-                      const description = formData.get('description');
-                      if (!title) return;
-                      addQuest({
-                        title,
-                        description,
-                        rewardType: formData.get('rewardType'),
-                        rewardAmount: Number(formData.get('rewardAmount')) || 0,
-                      });
-                      e.target.reset();
-                    }}
-                  >
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="space-y-1">
-                        <span>Quest Title</span>
-                        <input name="title" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" required />
-                      </label>
-                      <label className="space-y-1">
-                        <span>Reward Amount</span>
-                        <input name="rewardAmount" type="number" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" placeholder="40" />
-                      </label>
-                    </div>
-                    <label className="space-y-1">
-                      <span>Description</span>
-                      <textarea name="description" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2" rows="2"></textarea>
-                    </label>
-                    <label className="space-y-1">
-                      <span>Reward Type</span>
-                      <select name="rewardType" className="w-full rounded-xl border border-slate-200 bg-white/80 p-2">
-                        <option value="coins">Coins</option>
-                        <option value="essence">Bear Essence</option>
-                        <option value="memory">Memory Entry</option>
-                      </select>
-                    </label>
-                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-emerald-400 to-rose-400 px-4 py-2 text-sm font-semibold text-white shadow">
-                      Add Quest
-                    </button>
-                  </form>
-                  <div className="space-y-3">
-                    {state.sharedQuests.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-xs text-slate-400">
-                        Create your first quest to begin the story!
-                      </div>
-                    ) : (
-                      state.sharedQuests.map((quest) => (
-                        <QuestCard key={quest.id} quest={quest} onComplete={completeQuest} />
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-6 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Love Notes & Memories</h2>
-                  <p className="text-xs text-slate-400">Send encouragement, document feelings, and keep an evolving scrapbook.</p>
-                  <form
-                    className="space-y-3 rounded-2xl bg-rose-50/70 p-4 text-xs text-rose-500"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.target);
-                      const author = formData.get('author');
-                      const text = formData.get('text');
-                      if (!text) return;
-                      addLoveNote({ author, text, memory: formData.get('memory') });
-                      e.target.reset();
-                    }}
-                  >
-                    <label className="space-y-1">
-                      <span>Author</span>
-                      <select name="author" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2">
-                        <option>Gabe</option>
-                        <option>Savannah</option>
-                        <option>Gabe and Savannah's Bear Game</option>
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span>Note</span>
-                      <textarea name="text" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2" rows="3" required></textarea>
-                    </label>
-                    <label className="space-y-1">
-                      <span>Memory (optional)</span>
-                      <input name="memory" className="w-full rounded-xl border border-rose-200 bg-white/80 p-2" placeholder="Favorite moment or gratitude" />
-                    </label>
-                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-rose-400 to-amber-400 px-4 py-2 text-sm font-semibold text-white shadow">
-                      Send Love Note
-                    </button>
-                  </form>
-                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {state.loveNotes.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-rose-200 bg-white/60 p-4 text-xs text-rose-400">
-                        Leave your first love note to spark the board.
-                      </div>
-                    ) : (
-                      state.loveNotes.map((note) => (
-                        <LoveNoteCard key={note.id} note={note} onUpdate={(text) => updateLoveNote(note.id, text)} />
-                      ))
-                    )}
-                  </div>
-                  <div className="rounded-2xl bg-amber-50/70 p-4 text-xs text-amber-500">
-                    <div className="font-semibold text-amber-600">Memory Timeline</div>
-                    <div className="mt-2 space-y-2">
-                      {state.denMemories.length === 0 ? (
-                        <div>No quest memories yet. Complete a quest and add a reflection!</div>
-                      ) : (
-                        state.denMemories.map((memory) => (
-                          <div key={memory.id} className="rounded-xl bg-white/80 p-3">
-                            <div className="text-[11px] text-amber-400">{formatDate(memory.createdAt)}</div>
-                            <div className="text-sm font-semibold text-amber-600">{memory.questTitle}</div>
-                            <div className="text-xs text-amber-500">{memory.text}</div>
-                            {memory.photo && (
-                              <img src={memory.photo} alt="Memory" className="mt-2 h-24 w-full rounded-xl object-cover" />
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-              <section className="grid gap-6 lg:grid-cols-3">
-                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Daily Verse · Prayer Corner</h2>
-                  <p className="text-xs text-slate-400">Cycle through inspiration or read together as a shared devotion.</p>
-                  <div className="rounded-2xl bg-indigo-50/80 p-4 text-sm text-indigo-500">
-                    <div className="text-xs uppercase text-indigo-400">{verse.ref}</div>
-                    <div className="mt-2 text-base font-semibold text-indigo-600">{verse.text}</div>
-                    <button
-                      onClick={cycleVerse}
-                      className="mt-4 rounded-full bg-gradient-to-r from-indigo-400 to-rose-400 px-4 py-2 text-xs font-semibold text-white shadow"
-                    >
-                      Next Verse
-                    </button>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500">
-                    <div className="font-semibold text-slate-600">Prayer Prompts</div>
-                    <ul className="mt-2 list-disc space-y-1 pl-4">
-                      <li>Thankful for today's shared laughter.</li>
-                      <li>Pray for courage as you pursue a quest together.</li>
-                      <li>Bless family, friends, and future adventures.</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Date-Based Events</h2>
-                  <p className="text-xs text-slate-400">Celebrate birthdays, anniversaries, and custom milestones.</p>
-                  <form
-                    className="space-y-3 rounded-2xl bg-amber-50/70 p-4 text-xs text-amber-500"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.target);
-                      const name = formData.get('eventName');
-                      const date = formData.get('eventDate');
-                      const scene = formData.get('eventScene');
-                      if (!name || !date) return;
-                      addEvent({ name, date, scene, theme: 'bg-amber-100' });
-                      e.target.reset();
-                    }}
-                  >
-                    <label className="space-y-1">
-                      <span>Event Name</span>
-                      <input name="eventName" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" required />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Date (MM-DD)</span>
-                      <input name="eventDate" pattern="[0-9]{2}-[0-9]{2}" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" placeholder="02-14" required />
-                    </label>
-                    <label className="space-y-1">
-                      <span>Scene Description</span>
-                      <input name="eventScene" className="w-full rounded-xl border border-amber-200 bg-white/80 p-2" />
-                    </label>
-                    <button type="submit" className="w-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-white shadow">
-                      Add Event
-                    </button>
-                  </form>
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-2xl bg-white/70 p-3 text-xs text-slate-500">
-                    {state.events.map((event) => (
-                      <div key={event.id} className="rounded-xl bg-slate-50/80 p-3">
-                        <div className="text-[11px] text-slate-400">{event.date}</div>
-                        <div className="text-sm font-semibold text-slate-600">{event.name}</div>
-                        <div className="text-xs text-slate-500">{event.scene}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-3xl bg-white/80 p-6 shadow-lg backdrop-blur">
-                  <h2 className="text-xl font-bold text-slate-700">Sync & History</h2>
-                  <p className="text-xs text-slate-400">Optional Firebase sync keeps shared data across devices.</p>
-                  <label className="text-xs font-semibold text-slate-500">
-                    Firebase Config (JSON)
-                    <textarea
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white/80 p-2"
-                      rows="4"
-                      value={state.firebaseConfig}
-                      onChange={(e) => updateFirebaseConfig(e.target.value)}
-                    ></textarea>
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      className={`rounded-full px-4 py-2 text-xs font-semibold text-white shadow ${
-                        state.firebaseSyncEnabled ? 'bg-emerald-400' : 'bg-slate-300'
-                      }`}
-                      onClick={() =>
-                        updateState((prev) => ({
-                          ...prev,
-                          firebaseSyncEnabled: !prev.firebaseSyncEnabled,
-                        }))
-                      }
-                    >
-                      {state.firebaseSyncEnabled ? 'Disable Sync' : 'Enable Sync'}
-                    </button>
-                    <span className="text-[11px] text-slate-400">
-                      Sync is simulated. Configure Firebase Firestore to enable real-time sharing.
-                    </span>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50/70 p-4 text-xs text-slate-500">
-                    <div className="font-semibold text-slate-600">Recent Packs</div>
-                    <ul className="mt-2 space-y-1">
-                      {state.packHistory.length === 0 ? (
-                        <li>No packs opened yet.</li>
-                      ) : (
-                        state.packHistory.map((pack) => (
-                          <li key={pack.id}>
-                            {new Date(pack.time).toLocaleString()} · {pack.cards.join(', ')} · +{pack.essenceGain} essence
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              </section>
-              {packModal}
-            </div>
-            {ui.toast && (
-              <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-2xl bg-white/90 p-4 text-center text-sm font-semibold text-slate-600 shadow-lg">
-                {ui.toast.message}
-              </div>
+            {packResults && <PackReveal results={packResults} onClose={() => setPackResults(null)} />}
+            {showWardrobe && (
+              <WardrobeModal
+                inventory={state.accessories.inventory}
+                equipped={state.accessories.equipped}
+                onClose={() => setShowWardrobe(false)}
+                onEquip={handleEquip}
+              />
             )}
+            {showSettings && (
+              <SettingsModal
+                settings={state.settings}
+                onToggleVerse={toggleVerse}
+                onVolumeChange={handleVolume}
+                onClose={() => setShowSettings(false)}
+              />
+            )}
+            {activeMiniGame && (
+              <MiniGameModal
+                game={activeMiniGame}
+                onComplete={handleMiniGameComplete}
+                onClose={() => setActiveMiniGame(null)}
+              />
+            )}
+            <ToastStack toasts={state.toast} onDismiss={dismissToast} />
           </div>
         );
       };
 
-      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
     </script>
   </body>
 </html>
